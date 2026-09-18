@@ -1,0 +1,159 @@
+.nc-settings__sub {
+  margin: 6px 0 0;
+  max-width: 74ch;
+  font-size: var(--text-sm);
+  color: var(--nc-text-dim);
+}
+
+.nc-settings__note {
+  margin: 0 0 var(--space-3);
+  max-width: 74ch;
+  font-size: var(--text-sm);
+  color: var(--nc-text-dim);
+}
+
+/* ------------------------------------------------------------- permission */
+
+.nc-settings__permission {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--nc-line-soft);
+}
+
+.nc-settings__permission-state {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.nc-settings__permission-help {
+  margin: 4px 0 0;
+  max-width: 68ch;
+  font-size: var(--text-sm);
+  color: var(--nc-text-dim);
+}
+
+.nc-settings__controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  align-items: flex-start;
+}
+.nc-settings__controls > .nc-toggle,
+.nc-settings__controls > .nc-settings__field { width: 100%; }
+
+.nc-settings__field { display: flex; flex-direction: column; gap: 6px; }
+
+.nc-settings__field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nc-text-dim);
+}
+
+.nc-settings__field-help {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--nc-text-dim);
+}
+
+/* ------------------------------------------------------------ alert types */
+
+.nc-settings__types { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* ------------------------------------------------------------ quiet hours */
+
+.nc-settings__times {
+  display: flex;
+  gap: var(--space-4);
+  margin: var(--space-4) 0;
+  flex-wrap: wrap;
+}
+.nc-settings__times label { display: flex; flex-direction: column; gap: 6px; }
+.nc-settings__times input {
+  padding: 8px 11px;
+  border: 1px solid var(--nc-line);
+  border-radius: var(--radius);
+  background: var(--nc-surface);
+  color: var(--nc-text);
+  outline: none;
+}
+.nc-settings__times input:focus { border-color: var(--nc-cyan); }
+.nc-settings__times input:disabled { opacity: 0.45; }
+
+.nc-settings__warning {
+  margin: 0;
+  padding: 10px 13px;
+  border-left: 3px solid var(--nc-red);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: rgba(224, 27, 36, 0.1);
+  font-size: var(--text-sm);
+  color: var(--nc-text);
+}
+
+/* ------------------------------------------------------------- connection */
+
+.nc-settings__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+}
+.nc-settings__stats div { display: flex; flex-direction: column; gap: 3px; }
+.nc-settings__stats dt {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--nc-text-dim);
+}
+.nc-settings__stats dd {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.nc-settings__stats dd.is-good { color: #15803d; }
+.nc-settings__stats dd.is-bad { color: #b45309; }
+
+.nc-settings__dismissed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--nc-line-soft);
+}
+.nc-settings__dismissed p { margin: 0; font-size: var(--text-sm); color: var(--nc-text-dim); }
+
+/* ---------------------------------------------------------------- sources */
+
+.nc-settings__sources {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-2);
+}
+.nc-settings__sources li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 12px;
+  border: 1px solid var(--nc-line);
+  border-radius: var(--radius);
+  background: var(--nc-surface-raised);
+}
+.nc-settings__sources a { font-size: var(--text-sm); }
+.nc-settings__sources span { font-size: var(--text-xs); color: var(--nc-text-faint); }
+
+.nc-settings__features { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+@media (max-width: 860px) {
+  .nc-settings__permission { flex-direction: column; align-items: flex-start; }
+}

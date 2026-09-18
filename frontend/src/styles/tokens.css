@@ -1,0 +1,230 @@
+/* ==========================================================================
+   STORM 12 WEATHER - visual identity
+   --------------------------------------------------------------------------
+   An original broadcast palette: deep midnight navy for the studio ground,
+   a signal red for breaking coverage, and an electric cyan that carries the
+   "12" mark. Alert colours follow NWS product conventions so a viewer reads
+   a tornado warning the way they expect to.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* --- brand ---------------------------------------------------------- */
+  /* Slate rather than saturated navy: a product surface, not a light show. */
+  --nc-navy-900: #070e16;
+  --nc-navy-850: #0a131d;
+  --nc-navy-800: #0e1925;
+  --nc-navy-700: #122130;
+  --nc-navy-600: #192b3d;
+  --nc-navy-500: #243a50;
+  --nc-line: #1e2e40;
+  --nc-line-soft: #16222f;
+
+  --nc-red: #e01b24;
+  --nc-red-bright: #ff2a34;
+  --nc-red-deep: #9c0d14;
+  --nc-cyan: #00b4e6;
+  --nc-cyan-bright: #3fd8ff;
+  --nc-cyan-deep: #0079a8;
+  --nc-gold: #ffb800;
+  --nc-green: #22c55e;
+  --nc-violet: #7b68ee;
+
+  --nc-white: #f4f8fc;
+  --nc-text: #e8f0f8;
+  --nc-text-dim: #a3b1c0;
+  --nc-text-faint: #718296;
+
+  /* --- surfaces ------------------------------------------------------- */
+  --nc-bg: var(--nc-navy-900);
+  --nc-surface: #0e1925;
+  --nc-surface-solid: #0e1925;
+  --nc-surface-raised: #122130;
+  --nc-surface-hover: #16273a;
+  --nc-glass: rgba(10, 19, 29, 0.92);
+
+  /* --- alert tiers ---------------------------------------------------- */
+  --nc-tier-catastrophic: #ff1b1b;
+  --nc-tier-severe: #ffa200;
+  --nc-tier-moderate: #ffd400;
+  --nc-tier-minor: #7fb2d9;
+
+  /* --- typography ----------------------------------------------------- */
+  --font-display: 'Barlow Condensed', 'Oswald', 'Arial Narrow', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Roboto Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --text-xs: 0.6875rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 2.75rem;
+  --text-hero: clamp(4.5rem, 16vw, 8.5rem);
+
+  /* --- geometry ------------------------------------------------------- */
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.55);
+  /* Glows retired: nothing in a newsroom product should hum. */
+  --shadow-glow-red: none;
+  --shadow-glow-cyan: none;
+
+  --header-h: 62px;
+  --ticker-h: 38px;
+  --nav-h: 46px;
+  --mobile-nav-h: 60px;
+  /* The closings strip only exists when the newsroom has entered closings,
+     so full-height pages subtract it rather than assuming fixed chrome. */
+  --closings-h: 0px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Gradients used for the logo mark and breaking-weather furniture. */
+  --grad-brand: linear-gradient(135deg, var(--nc-cyan-bright) 0%, var(--nc-cyan) 45%, var(--nc-cyan-deep) 100%);
+  --grad-breaking: linear-gradient(100deg, var(--nc-red-deep) 0%, var(--nc-red) 40%, var(--nc-red-bright) 100%);
+  --grad-panel: var(--nc-surface);
+  --grad-lower-third: linear-gradient(90deg, rgba(4, 16, 28, 0.97) 0%, rgba(10, 27, 44, 0.9) 55%, rgba(10, 27, 44, 0) 100%);
+}
+
+/* A daylight theme for tablets mounted in bright control rooms. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --nc-bg: #eef3f8;
+  --nc-navy-900: #eef3f8;
+  --nc-navy-850: #e4ecf4;
+  --nc-navy-800: #ffffff;
+  --nc-navy-700: #ffffff;
+  --nc-navy-600: #dce6f0;
+  --nc-line: #c6d4e2;
+  --nc-line-soft: #dbe4ee;
+  --nc-text: #0a1b2c;
+  --nc-text-dim: #4a6076;
+  --nc-text-faint: #7b8fa3;
+  --nc-surface: rgba(255, 255, 255, 0.92);
+  --nc-surface-solid: #ffffff;
+  --nc-surface-raised: #f5f8fb;
+  --nc-surface-hover: rgba(220, 230, 240, 0.9);
+  --nc-glass: rgba(255, 255, 255, 0.9);
+  --grad-panel: linear-gradient(180deg, #ffffff 0%, #f2f6fa 100%);
+  --shadow: 0 6px 20px rgba(10, 27, 44, 0.12);
+  --shadow-lg: 0 18px 48px rgba(10, 27, 44, 0.18);
+}
+
+/* ==========================================================================
+   LIGHT NEWS-SITE THEME (default)
+   --------------------------------------------------------------------------
+   A station weather site is a light page: white cards on a pale ground,
+   dark text, and a brand header bar. The dark navy-and-cyan dashboard this
+   replaced is the look of a generated template, not of a TV station.
+   ========================================================================== */
+:root {
+  color-scheme: light;
+
+  --nc-brand-navy: #0b2545;
+  --nc-brand-navy-deep: #081b34;
+  --nc-brand-red: #c8102e;
+  /* Text colour on an accent-filled control (a primary button). */
+  --nc-on-accent: #ffffff;
+
+  --nc-navy-900: #eef1f5;
+  --nc-navy-850: #f5f7fa;
+  --nc-navy-800: #ffffff;
+  --nc-navy-700: #eef1f5;
+  --nc-navy-600: #e2e7ee;
+  --nc-navy-500: #cbd4df;
+  --nc-line: #dde3ea;
+  --nc-line-soft: #e9edf2;
+
+  /* The accent becomes a readable news blue on a light ground. */
+  --nc-cyan: #0b63c4;
+  --nc-cyan-bright: #0a58ca;
+  --nc-cyan-deep: #084c9e;
+
+  --nc-text: #111a2b;
+  --nc-text-dim: #4a5566;
+  --nc-text-faint: #6b7686;
+
+  --nc-bg: #eef1f5;
+  --nc-surface: #ffffff;
+  --nc-surface-solid: #ffffff;
+  --nc-surface-raised: #f6f8fa;
+  --nc-surface-hover: #f0f3f7;
+  --nc-glass: rgba(255, 255, 255, 0.96);
+  --grad-panel: var(--nc-surface);
+  --grad-brand: linear-gradient(135deg, #0b63c4 0%, #084c9e 100%);
+}
+
+/* ==========================================================================
+   DARK FURNITURE
+   --------------------------------------------------------------------------
+   The header bar, radar and maps, ticker, breaking banner, Broadcast Mode,
+   the video stage and the admin tool keep the dark palette - that is where
+   it belongs. Token values are redefined on each element and inherit into
+   everything inside it. `color` is re-declared because the page text colour
+   is computed once on <body> and would otherwise inherit as dark text.
+   ========================================================================== */
+:root[data-theme='dark'],
+.nc-header,
+.nc-radar,
+.nc-map-page,
+.nc-broadcast,
+.nc-ticker,
+.nc-breaking,
+.nc-live__stage,
+.leaflet-container,
+.nc-admin,
+.nc-admin-login {
+  color-scheme: dark;
+  color: var(--nc-text);
+
+  --nc-on-accent: #04101c;
+
+  --nc-navy-900: #070e16;
+  --nc-navy-850: #0a131d;
+  --nc-navy-800: #0e1925;
+  --nc-navy-700: #122130;
+  --nc-navy-600: #192b3d;
+  --nc-navy-500: #243a50;
+  --nc-line: #1e2e40;
+  --nc-line-soft: #16222f;
+
+  --nc-cyan: #00b4e6;
+  --nc-cyan-bright: #3fd8ff;
+  --nc-cyan-deep: #0079a8;
+
+  --nc-gold: #ffb800;
+  --nc-green: #22c55e;
+  --nc-tier-severe: #ffa200;
+  --nc-tier-moderate: #ffd400;
+  --nc-tier-minor: #7fb2d9;
+
+  --nc-text: #e8f0f8;
+  --nc-text-dim: #a3b1c0;
+  --nc-text-faint: #718296;
+
+  --nc-bg: #070e16;
+  --nc-surface: #0e1925;
+  --nc-surface-solid: #0e1925;
+  --nc-surface-raised: #122130;
+  --nc-surface-hover: #16273a;
+  --nc-glass: rgba(10, 19, 29, 0.92);
+  --grad-panel: var(--nc-surface);
+  --grad-brand: linear-gradient(135deg, #3fd8ff 0%, #00b4e6 45%, #0079a8 100%);
+}

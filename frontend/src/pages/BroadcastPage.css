@@ -1,0 +1,519 @@
+/* ==========================================================================
+   BROADCAST MODE
+   --------------------------------------------------------------------------
+   A fixed 1920x1080 on-air stage, scaled to whatever screen it is shown on.
+   Everything inside the stage is sized in absolute pixels on purpose: this
+   surface has to keep broadcast proportions, not respond to a viewport.
+   ========================================================================== */
+
+.nc-broadcast {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #010810;
+  color: var(--nc-text);
+}
+
+.nc-broadcast--message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+
+.nc-broadcast__exit-link {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.nc-broadcast__loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.nc-broadcast__stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center center;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(120% 90% at 12% 0%, #0e2438 0%, rgba(14, 36, 56, 0) 62%),
+    linear-gradient(160deg, #06121f 0%, #04101c 55%, #020a12 100%);
+  font-family: var(--font-body);
+  overflow: hidden;
+}
+
+.nc-broadcast__stage.is-takeover {
+  box-shadow: inset 0 0 0 6px var(--nc-red);
+}
+
+/* ------------------------------------------------------------------ header */
+
+.nc-bc__header {
+  flex: 0 0 108px;
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  padding: 0 44px;
+  border-bottom: 3px solid var(--nc-cyan-deep);
+  background: linear-gradient(90deg, rgba(10, 27, 44, 0.95), rgba(6, 18, 31, 0.7));
+}
+
+.nc-bc__brand { display: flex; align-items: center; gap: 20px; }
+
+.nc-bc__station {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  color: var(--nc-white);
+}
+
+.nc-bc__market {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--nc-cyan-bright);
+}
+
+.nc-bc__headline-place { flex: 1 1 auto; text-align: center; }
+
+.nc-bc__place {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.nc-bc__condition {
+  margin: 5px 0 0;
+  font-size: 20px;
+  letter-spacing: 0.04em;
+  color: var(--nc-text-dim);
+}
+
+.nc-bc__clock { text-align: right; }
+
+.nc-bc__time {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 46px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.nc-bc__date {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: var(--nc-text-dim);
+}
+
+/* ---------------------------------------------------------------- takeover */
+
+.nc-bc__takeover {
+  flex: 0 0 84px;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  padding: 0 44px;
+  background: linear-gradient(90deg, var(--c, var(--nc-red)), rgba(4, 16, 28, 0.2));
+  animation: nc-bc-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes nc-bc-pulse {
+  0%, 100% { filter: saturate(1); }
+  50% { filter: saturate(1.5) brightness(1.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nc-bc__takeover { animation: none; }
+}
+
+.nc-bc__takeover-tag {
+  padding: 6px 16px;
+  background: var(--nc-white);
+  color: #7a0b10;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+}
+
+.nc-bc__takeover-event {
+  font-family: var(--font-display);
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--nc-white);
+}
+
+.nc-bc__takeover-area {
+  flex: 1 1 auto;
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.9);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.nc-bc__takeover-until {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--nc-white);
+}
+
+/* -------------------------------------------------------------------- body */
+
+.nc-bc__body {
+  flex: 1 1 auto;
+  display: flex;
+  gap: 24px;
+  padding: 24px 44px;
+  min-height: 0;
+  /* The stage is a fixed 1080 tall: nothing in here may spill onto the
+     seven-day strip below, whatever the data does to the rail's height. */
+  overflow: hidden;
+}
+
+.nc-bc__radar {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 2px solid var(--nc-navy-500);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #04101c;
+}
+
+.nc-bc__radar-loading { height: 100%; display: grid; place-items: center; }
+
+.nc-bc__rail {
+  flex: 0 0 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 0;
+}
+
+/* ------------------------------------------------------- current conditions */
+
+.nc-bc__now {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 26px 16px;
+  border: 2px solid var(--nc-navy-500);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(20, 48, 73, 0.75), rgba(6, 18, 31, 0.85));
+}
+
+.nc-bc__temp {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: 92px;
+  font-weight: 800;
+  line-height: 0.9;
+  color: var(--nc-white);
+}
+
+.nc-bc__feels {
+  margin: 4px 0 10px;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: var(--nc-text-dim);
+}
+.nc-bc__feels strong { color: var(--nc-cyan-bright); }
+
+.nc-bc__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 12px;
+  width: 100%;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--nc-line);
+}
+.nc-bc__stats div { display: flex; flex-direction: column; gap: 3px; text-align: center; }
+.nc-bc__stats dt {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--nc-text-faint);
+}
+.nc-bc__stats dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--nc-text);
+}
+
+/* ----------------------------------------------------------- storm tracker */
+
+.nc-bc__storm {
+  flex: 0 0 auto;
+  padding: 18px 24px;
+  border: 2px solid var(--c, var(--nc-red));
+  border-left-width: 10px;
+  border-radius: 10px;
+  background: linear-gradient(90deg, rgba(224, 27, 36, 0.18), rgba(6, 18, 31, 0.9));
+}
+
+.nc-bc__storm-kicker {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.26em;
+  color: var(--c, var(--nc-red-bright));
+}
+
+.nc-bc__storm-event {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--nc-white);
+}
+
+.nc-bc__storm-move {
+  margin: 6px 0 0;
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  color: var(--nc-text-dim);
+}
+
+.nc-bc__storm-eta {
+  margin: 8px 0 0;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--nc-gold);
+}
+
+/* ------------------------------------------------------------ hourly strip */
+
+.nc-bc__hourly {
+  flex: 0 0 auto;
+  padding: 12px 16px 14px;
+  border: 2px solid var(--nc-navy-500);
+  border-radius: 10px;
+  background: rgba(6, 18, 31, 0.8);
+}
+
+.nc-bc__section-title,
+.nc-bc__seven-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.26em;
+  color: var(--nc-cyan-bright);
+}
+
+.nc-bc__hourly-strip { display: flex; gap: 6px; }
+
+.nc-bc__hour {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 2px;
+  border-radius: 6px;
+  background: rgba(20, 48, 73, 0.5);
+}
+
+.nc-bc__hour-time { font-family: var(--font-display); font-size: 14px; color: var(--nc-text-dim); }
+.nc-bc__hour-temp { font-family: var(--font-display); font-size: 24px; font-weight: 800; }
+.nc-bc__hour-pop { font-size: 13px; color: var(--nc-cyan-bright); }
+
+/* --------------------------------------------------------- seven day strip */
+
+.nc-bc__seven {
+  flex: 0 0 auto;
+  padding: 14px 44px 0;
+}
+
+.nc-bc__seven-strip { display: flex; gap: 12px; }
+
+.nc-bc__day {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 6px 14px;
+  border: 1px solid var(--nc-line);
+  border-top: 4px solid var(--nc-cyan-deep);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(20, 48, 73, 0.7), rgba(6, 18, 31, 0.85));
+}
+
+.nc-bc__day-name {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--nc-white);
+}
+.nc-bc__day-high { font-family: var(--font-display); font-size: 38px; font-weight: 800; line-height: 1; }
+.nc-bc__day-low {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--nc-text-dim);
+}
+.nc-bc__day-pop { font-size: 15px; color: var(--nc-cyan-bright); }
+
+/* ------------------------------------------------------------------- crawl */
+
+.nc-bc__crawl {
+  flex: 0 0 66px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 0 0 0;
+  border-top: 3px solid var(--nc-cyan-deep);
+  background: linear-gradient(90deg, rgba(10, 27, 44, 0.98), rgba(4, 16, 28, 0.92));
+  overflow: hidden;
+}
+
+.nc-bc__crawl-tag {
+  flex: 0 0 auto;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: 0 26px;
+  background: var(--nc-red);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: var(--nc-white);
+}
+
+.nc-bc__crawl-track { flex: 1 1 auto; overflow: hidden; }
+
+.nc-bc__crawl-run {
+  display: flex;
+  align-items: center;
+  gap: 46px;
+  white-space: nowrap;
+  animation: nc-bc-crawl 48s linear infinite;
+}
+
+@keyframes nc-bc-crawl {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nc-bc__crawl-run { animation: none; }
+}
+
+.nc-bc__crawl-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--nc-text);
+}
+.nc-bc__crawl-item strong { color: var(--nc-cyan-bright); }
+.nc-bc__crawl-item.is-alert { color: var(--c, var(--nc-red-bright)); }
+
+.nc-bc__sponsor {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 0 32px;
+  border-left: 1px solid var(--nc-line);
+}
+.nc-bc__sponsor em {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-style: normal;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--nc-text-faint);
+}
+.nc-bc__sponsor strong {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--nc-white);
+}
+
+/* -------------------------------------------------------- operator chrome */
+
+.nc-broadcast__chrome {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease-out);
+}
+.nc-broadcast__chrome.is-visible { opacity: 1; pointer-events: auto; }
+
+.nc-broadcast__chrome-btn {
+  padding: 7px 14px;
+  border: 1px solid var(--nc-line);
+  border-radius: var(--radius);
+  background: rgba(4, 16, 28, 0.85);
+  color: var(--nc-text);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.nc-broadcast__chrome-btn:hover { border-color: var(--nc-cyan); }
+
+.nc-broadcast__chrome-meta {
+  padding: 7px 12px;
+  border-radius: var(--radius);
+  background: rgba(4, 16, 28, 0.85);
+  font-size: var(--text-xs);
+  color: var(--nc-text-dim);
+}

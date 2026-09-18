@@ -1,0 +1,114 @@
+.nc-closings__sub {
+  margin: 6px 0 0;
+  max-width: 76ch;
+  font-size: var(--text-sm);
+  color: var(--nc-text-dim);
+}
+
+.nc-closings__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.nc-closings__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--nc-line);
+  border-left: 4px solid var(--c, var(--nc-cyan));
+  border-radius: var(--radius);
+  background: var(--nc-surface);
+}
+
+.nc-closings__stat-value {
+  font-family: var(--font-display);
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--c, var(--nc-text));
+}
+
+.nc-closings__stat-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--nc-text-dim);
+}
+
+.nc-closings__search {
+  padding: 7px 12px;
+  border: 1px solid var(--nc-line);
+  border-radius: var(--radius);
+  background: var(--nc-surface);
+  color: var(--nc-text);
+  font-size: var(--text-sm);
+  outline: none;
+  min-width: 220px;
+}
+.nc-closings__search:focus { border-color: var(--nc-cyan); }
+
+.nc-closings__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.nc-closings__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-2);
+}
+
+.nc-closings__list li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px var(--space-3);
+  align-items: baseline;
+  padding: 10px 13px;
+  border: 1px solid var(--nc-line);
+  border-left: 3px solid var(--c, var(--nc-cyan));
+  border-radius: var(--radius);
+  background: var(--nc-surface-raised);
+}
+
+.nc-closings__name {
+  font-size: var(--text-base);
+  font-weight: 600;
+  min-width: 0;
+}
+
+.nc-closings__status {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: capitalize;
+  color: var(--c, var(--nc-cyan));
+  white-space: nowrap;
+}
+
+.nc-closings__detail {
+  grid-column: 1 / -1;
+  font-size: var(--text-sm);
+  color: var(--nc-text-dim);
+}
+
+.nc-closings__meta {
+  grid-column: 1 / -1;
+  font-size: var(--text-xs);
+  color: var(--nc-text-faint);
+}
+
+.nc-closings__none {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--nc-text-dim);
+}
+
+@media (max-width: 860px) {
+  .nc-closings__list { grid-template-columns: 1fr; }
+  .nc-closings__search { min-width: 0; width: 100%; }
+}

@@ -1,0 +1,293 @@
+.nc-breaking {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--alert-color, var(--nc-red)) 55%, transparent);
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--alert-color, var(--nc-red)) 26%, #0a1b2c) 0%,
+    rgba(10, 27, 44, 0.96) 55%
+  );
+  box-shadow: var(--shadow);
+  animation: nc-fade-up 0.4s var(--ease-out) both;
+}
+
+/* A warning takes the screen: brighter ground and a pulsing edge. */
+.nc-breaking.is-takeover {
+  border-width: 2px;
+  box-shadow: var(--shadow), 0 0 30px color-mix(in srgb, var(--alert-color, var(--nc-red)) 35%, transparent);
+}
+
+.nc-breaking.is-critical {
+  animation: nc-fade-up 0.4s var(--ease-out) both, nc-breaking-throb 2.6s ease-in-out infinite 0.4s;
+}
+
+@keyframes nc-breaking-throb {
+  0%, 100% { box-shadow: var(--shadow), 0 0 22px rgba(255, 27, 27, 0.3); }
+  50% { box-shadow: var(--shadow), 0 0 44px rgba(255, 27, 27, 0.62); }
+}
+
+/* ------------------------------------------------------------------ flag */
+
+.nc-breaking__flag {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex: none;
+  width: 58px;
+  padding: var(--space-4) 0;
+  background: var(--grad-breaking);
+  color: #fff;
+}
+
+.nc-breaking.is-standard .nc-breaking__flag {
+  background: linear-gradient(
+    170deg,
+    color-mix(in srgb, var(--alert-color, var(--nc-gold)) 90%, #000) 0%,
+    color-mix(in srgb, var(--alert-color, var(--nc-gold)) 60%, #000) 100%
+  );
+  color: #10100a;
+}
+
+.nc-breaking__flag-text {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ body */
+
+.nc-breaking__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5) var(--space-4) var(--space-4);
+}
+
+.nc-breaking__headline-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.nc-breaking__event {
+  font-size: clamp(1.5rem, 3.6vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+.nc-breaking__emergency {
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--nc-red-deep);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  animation: nc-blink 1s steps(2) infinite;
+}
+
+.nc-breaking__until {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--nc-text-dim);
+}
+.nc-breaking__until strong { color: var(--nc-text); }
+.nc-breaking__countdown { font-style: normal; color: var(--nc-gold); font-weight: 600; }
+
+.nc-breaking__label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--nc-text-faint);
+}
+
+.nc-breaking__areas {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--nc-text);
+}
+
+/* ----------------------------------------------------------------- storm */
+
+.nc-breaking__storm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  padding: var(--space-3) 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nc-breaking__stat { display: flex; flex-direction: column; gap: 2px; }
+.nc-breaking__stat strong {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.nc-breaking__stat.is-eta strong { color: var(--nc-gold); }
+
+/* ------------------------------------------------------------- potential */
+
+.nc-breaking__potential {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nc-breaking__potential li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.25);
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.nc-breaking__potential li em {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0;
+  color: var(--nc-text-dim);
+}
+.nc-breaking__potential li.is-extreme { border-color: #fff; background: rgba(255, 27, 27, 0.4); color: #fff; }
+.nc-breaking__potential li.is-high { border-color: var(--nc-tier-severe); color: #ffcf80; }
+.nc-breaking__potential li.is-moderate { color: var(--nc-text); }
+
+/* ---------------------------------------------------------------- detail */
+
+.nc-breaking__detail {
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.3);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  white-space: pre-line;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.nc-breaking__instruction { color: #ffd9db; }
+.nc-breaking__source {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--nc-text-faint);
+}
+
+/* --------------------------------------------------------------- actions */
+
+.nc-breaking__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin-top: 2px;
+}
+
+.nc-breaking__actions button,
+.nc-breaking__actions a {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--nc-cyan-bright);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.nc-breaking__actions button:hover,
+.nc-breaking__actions a:hover { border-bottom-color: currentColor; text-decoration: none; }
+
+.nc-breaking__more {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--nc-text-faint);
+}
+
+.nc-breaking__dismiss {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--nc-text-dim);
+}
+.nc-breaking__dismiss:hover { background: rgba(0, 0, 0, 0.6); color: #fff; }
+
+@media (max-width: 720px) {
+  .nc-breaking__flag { width: 42px; }
+  .nc-breaking__flag-text { font-size: var(--text-xs); letter-spacing: 0.22em; }
+  .nc-breaking__body { padding: var(--space-3); }
+  .nc-breaking__until { margin-left: 0; width: 100%; }
+  .nc-breaking__storm { gap: var(--space-4); }
+  .nc-breaking__stat strong { font-size: var(--text-base); }
+}
+
+/* Who issued this: an NWS product and a station bulletin must never be
+   mistaken for one another, so the banner always names its source. */
+.nc-breaking__source {
+  padding: 2px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
+  white-space: nowrap;
+}
+.nc-breaking__source.is-station {
+  border-color: var(--nc-cyan);
+  color: var(--nc-cyan-bright);
+}
+
+.nc-breaking__headline {
+  margin: 6px 0 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--nc-white);
+}

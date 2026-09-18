@@ -1,0 +1,294 @@
+/* ==========================================================================
+   SHARED MAP OVERLAYS
+   --------------------------------------------------------------------------
+   Styling for the markers built in overlays.ts - station plots, storm
+   markers, radar sites, the viewer's own position, popups and tooltips.
+
+   These live with the builders rather than with the radar page. They used to
+   sit in RadarMap.css, which meant any other page drawing the same overlays
+   (the Weather Map, county detail) rendered them unstyled, because that
+   stylesheet only ships in the radar chunk.
+   ========================================================================== */
+
+/* ------------------------------------------------------------- map marks */
+
+.nc-here {
+  position: relative;
+  display: block;
+  width: 26px;
+  height: 26px;
+}
+.nc-here__dot {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: var(--nc-cyan-bright);
+  border: 2px solid #04101c;
+  box-shadow: 0 0 10px rgba(63, 216, 255, 0.9);
+}
+.nc-here__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--nc-cyan);
+  opacity: 0.7;
+  animation: nc-here-pulse 2.4s ease-out infinite;
+}
+
+@keyframes nc-here-pulse {
+  0% { transform: scale(0.4); opacity: 0.85; }
+  100% { transform: scale(1.25); opacity: 0; }
+}
+
+.nc-storm-marker {
+  position: relative;
+  display: block;
+  width: 30px;
+  height: 30px;
+}
+.nc-storm-marker__pulse {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: var(--c, #fff);
+  opacity: 0.35;
+  animation: nc-here-pulse 2s ease-out infinite;
+}
+.nc-storm-marker__arrow {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.nc-storm-marker__arrow::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 3px;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 15px solid var(--c, #fff);
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.6));
+}
+
+/* Emergency polygons flash so they cannot be missed on a wall monitor. */
+.nc-alert-poly.is-emergency { animation: nc-poly-flash 1.6s ease-in-out infinite; }
+@keyframes nc-poly-flash {
+  0%, 100% { fill-opacity: 0.2; }
+  50% { fill-opacity: 0.46; }
+}
+
+.nc-storm-track { animation: nc-dash 1.6s linear infinite; }
+@keyframes nc-dash {
+  to { stroke-dashoffset: -30; }
+}
+
+/* --------------------------------------------------------- observations */
+
+.nc-obs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.nc-obs--value {
+  color: var(--c, #fff);
+  text-shadow: 0 0 3px #04101c, 0 0 3px #04101c, 0 1px 2px #04101c;
+}
+.nc-obs--dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--c, #fff);
+  border: 1.5px solid #04101c;
+  margin: auto;
+}
+.nc-obs--wind { gap: 3px; color: var(--nc-text); }
+.nc-obs__arrow {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 11px solid var(--nc-cyan-bright);
+}
+.nc-obs__wind-value { font-size: 10px; text-shadow: 0 0 3px #04101c; }
+
+/* ---------------------------------------------------------------- popups */
+
+.nc-popup h4 {
+  margin: 4px 0 5px;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.nc-popup p { margin: 0 0 5px; font-size: var(--text-sm); line-height: 1.45; }
+.nc-popup__tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: var(--nc-cyan);
+  color: #04101c;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.nc-popup__meta {
+  font-size: 10px !important;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--nc-text-faint);
+}
+.nc-popup__table { width: 100%; border-collapse: collapse; font-size: var(--text-xs); }
+.nc-popup__table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--nc-text-faint);
+  padding: 2px 8px 2px 0;
+  white-space: nowrap;
+}
+.nc-popup__table td { font-family: var(--font-mono); padding: 2px 0; }
+.nc-popup__raw {
+  margin-top: 6px !important;
+  padding-top: 5px;
+  border-top: 1px solid var(--nc-line);
+  font-family: var(--font-mono);
+  font-size: 10px !important;
+  color: var(--nc-text-faint);
+  word-break: break-all;
+}
+
+.nc-map-tip {
+  background: rgba(4, 16, 28, 0.94);
+  border: 1px solid var(--nc-line);
+  color: var(--nc-text);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-sm);
+}
+.nc-map-tip::before { border-top-color: var(--nc-line) !important; }
+
+/* The playback scrubber owns the bottom strip of the map. Leaflet's own
+   bottom-right stack - the zoom buttons and the tile attribution we are
+   required to show - is lifted clear of it rather than buried underneath. */
+.nc-radar .leaflet-bottom.leaflet-right { bottom: 78px; }
+
+@media (max-width: 860px) {
+  .nc-radar .leaflet-bottom.leaflet-right { bottom: 96px; }
+}
+
+/* Provenance under the product name: which scan, and where it came from. */
+.nc-radar__scan {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--nc-text-faint);
+}
+
+/* ------------------------------------------------------ radar site plots */
+
+.nc-site-wrap { pointer-events: auto; }
+
+.nc-site {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transform: translateX(-6px);
+}
+
+.nc-site__dot {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  border: 1.5px solid var(--nc-white);
+  border-radius: 2px;
+  background: var(--nc-navy-900);
+  /* A diamond reads as equipment, not as another weather symbol. */
+  transform: rotate(45deg);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+.nc-site__id {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--nc-white);
+  text-shadow: 0 0 3px #000, 0 0 6px #000;
+}
+
+.nc-site:hover .nc-site__dot { border-color: var(--nc-cyan-bright); }
+
+.nc-site.is-active .nc-site__dot {
+  border-color: var(--nc-cyan-bright);
+  background: var(--nc-cyan);
+  box-shadow: 0 0 0 3px rgba(0, 180, 230, 0.28);
+}
+.nc-site.is-active .nc-site__id { color: var(--nc-cyan-bright); }
+
+.nc-site.is-offline .nc-site__dot { border-color: var(--nc-red-bright); background: var(--nc-red-deep); }
+.nc-site.is-offline .nc-site__id { color: var(--nc-text-faint); text-decoration: line-through; }
+
+/* ------------------------------------------------------- broadcast basemap */
+
+/*
+ * The on-air ground: a desaturated grey landmass with the terrain still
+ * showing through. Radar is the only saturated thing on the map, so a cell
+ * reads instantly against it - a green base competes with light reflectivity
+ * for the same part of the eye.
+ */
+.nc-basemap--broadcast {
+  filter: grayscale(1) brightness(1.05) contrast(0.92);
+}
+
+/*
+ * Highways are pushed from Esri's orange toward the maroon a station uses, and
+ * darkened so they sit under the labels rather than fighting them.
+ */
+.nc-basemap--roads {
+  filter: grayscale(0.35) sepia(0.45) hue-rotate(-28deg) saturate(2.6) brightness(0.78);
+}
+
+/* ---------------------------------------------------------- place labels */
+
+.nc-place-wrap { pointer-events: none; }
+
+/*
+ * Broadcast city labels: set in caps, white, heavily haloed, with no marker
+ * dot - on a weather map the name is the mark. Caps hold up over both a dark
+ * ground and bright reflectivity, which mixed case at this size does not.
+ */
+.nc-place {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  font-family: var(--font-body);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  text-shadow:
+    0 0 3px #000, 0 0 4px #000, 0 0 8px rgba(0, 0, 0, 0.95),
+    1px 1px 0 rgba(0, 0, 0, 0.9), -1px -1px 0 rgba(0, 0, 0, 0.9);
+}
+
+.nc-place--t1 { font-size: 19px; letter-spacing: 0.06em; }
+.nc-place--t2 { font-size: 16px; }
+.nc-place--t3 { font-size: 14px; }
+.nc-place--t4 { font-size: 12px; font-weight: 600; }

@@ -1,0 +1,18 @@
+.nc-radar-page {
+  position: relative;
+  /* Fill the viewport below the header, above the ticker. */
+  height: calc(100vh - var(--header-h) - var(--nav-h) - var(--ticker-h) - var(--closings-h));
+  min-height: 420px;
+}
+
+.nc-radar-page .nc-radar {
+  height: 100%;
+  border: none;
+  border-radius: 0;
+}
+
+@media (max-width: 860px) {
+  .nc-radar-page {
+    height: calc(100vh - var(--header-h) - var(--ticker-h) - var(--mobile-nav-h) - var(--closings-h) - env(safe-area-inset-bottom));
+  }
+}

@@ -1,0 +1,345 @@
+@import './tokens.css';
+
+/* ==========================================================================
+   Base + shared broadcast furniture
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--nc-bg);
+  color: var(--nc-text);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+
+/* A flat ground. The coloured radial wash that used to sit here is exactly
+   the kind of decoration that makes a product read as generated. */
+body::before { content: none; }
+
+:root[data-theme='light'] body::before {
+  background:
+    radial-gradient(1200px 600px at 12% -10%, rgba(0, 180, 230, 0.1), transparent 60%),
+    radial-gradient(900px 500px at 95% 0%, rgba(224, 27, 36, 0.05), transparent 55%);
+}
+
+/* Headings use the UI face. The condensed display face is reserved for the
+   hero temperature and on-air furniture, where broadcast styling belongs. */
+h1, h2, h3, h4, h5 {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+p { margin: 0 0 0.75em; }
+p:last-child { margin-bottom: 0; }
+
+a {
+  color: var(--nc-cyan-bright);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+input, select, textarea { font: inherit; }
+
+::selection {
+  background: var(--nc-cyan);
+  color: var(--nc-navy-900);
+}
+
+/* --- scrollbars ------------------------------------------------------ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--nc-navy-500) transparent;
+}
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--nc-navy-500);
+  border-radius: 99px;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--nc-cyan-deep); }
+
+/* --- accessibility --------------------------------------------------- */
+:focus-visible {
+  outline: 2px solid var(--nc-cyan-bright);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 200;
+  padding: 10px 16px;
+  background: var(--nc-cyan);
+  color: var(--nc-navy-900);
+  font-weight: 700;
+}
+.skip-link:focus { left: 8px; top: 8px; }
+
+/* ==========================================================================
+   Shared broadcast components
+   ========================================================================== */
+
+/* Page kicker: one small label above a page title, the way a news site
+   uses it - once per page, never on every card. */
+.nc-eyebrow {
+  margin: 0 0 4px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  /* The station's red, the way a news site marks its section kicker. */
+  color: var(--nc-brand-red);
+}
+
+/* Panel: the standard card used everywhere. */
+/* Panel: a flat surface with a hairline border. No gradient, no shadow -
+   hierarchy comes from type and spacing rather than decoration. */
+.nc-panel {
+  position: relative;
+  background: var(--nc-surface);
+  border: 1px solid var(--nc-line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.nc-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 14px var(--space-4) 12px;
+  border-bottom: 1px solid var(--nc-line-soft);
+}
+
+.nc-panel__title {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  line-height: 1.3;
+}
+
+.nc-panel__body { padding: var(--space-4); }
+
+/* Lower third: the on-air name strip, reused for page + map captions. */
+.nc-lower-third {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  min-height: 48px;
+  background: var(--grad-lower-third);
+  border-left: 5px solid var(--nc-cyan);
+  padding: var(--space-2) var(--space-6) var(--space-2) var(--space-3);
+  backdrop-filter: blur(6px);
+}
+.nc-lower-third--alert { border-left-color: var(--nc-red); }
+.nc-lower-third__kicker {
+  /* A lower third stacks: without this the kicker and the title are both
+     inline and print on top of one another once the kicker gets long. */
+  display: block;
+  line-height: 1.2;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--nc-cyan-bright);
+}
+.nc-lower-third--alert .nc-lower-third__kicker { color: var(--nc-red-bright); }
+.nc-lower-third__title {
+  display: block;
+  line-height: 1.1;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Data readout: tabular figures so numbers hold their width as they change.
+   Deliberately NOT monospace - a mono clock and mono stats read as a
+   developer console, and no station product sets its numbers that way. */
+.nc-readout {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* Live dot */
+.nc-live-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--nc-red-bright);
+  box-shadow: 0 0 0 0 rgba(255, 42, 52, 0.7);
+  animation: nc-pulse 1.8s infinite;
+}
+
+@keyframes nc-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 42, 52, 0.65); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 42, 52, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 42, 52, 0); }
+}
+
+@keyframes nc-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes nc-sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes nc-shimmer {
+  from { background-position: -220% 0; }
+  to { background-position: 220% 0; }
+}
+
+.nc-enter { animation: nc-fade-up 0.35s var(--ease-out) both; }
+
+/* Loading skeleton */
+.nc-skeleton {
+  border-radius: var(--radius);
+  background: linear-gradient(
+    100deg,
+    var(--nc-navy-700) 25%,
+    var(--nc-navy-600) 45%,
+    var(--nc-navy-700) 65%
+  );
+  background-size: 220% 100%;
+  animation: nc-shimmer 1.4s infinite linear;
+}
+
+/* Utility layout helpers */
+.nc-stack { display: flex; flex-direction: column; gap: var(--space-4); }
+.nc-row { display: flex; align-items: center; gap: var(--space-3); }
+.nc-wrap { flex-wrap: wrap; }
+.nc-grow { flex: 1 1 auto; min-width: 0; }
+.nc-scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+
+.nc-page {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1560px;
+  margin: 0 auto;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.nc-page__title {
+  font-family: var(--font-body);
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+@media (max-width: 720px) {
+  .nc-page { padding: var(--space-3); gap: var(--space-4); }
+  .nc-page__title { font-size: 24px; }
+}
+
+/* Respect reduced motion for every decorative animation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   Leaflet overrides - the map has to read as broadcast furniture
+   ========================================================================== */
+
+.leaflet-container {
+  background: #04101c;
+  font-family: var(--font-body);
+  outline: none;
+}
+.leaflet-control-container .leaflet-control-attribution {
+  background: rgba(4, 16, 28, 0.75);
+  color: var(--nc-text-faint);
+  font-size: 10px;
+  backdrop-filter: blur(4px);
+}
+.leaflet-control-attribution a { color: var(--nc-text-dim); }
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  background: var(--nc-navy-700);
+  color: var(--nc-text);
+  border-bottom-color: var(--nc-line);
+}
+.leaflet-bar a:hover { background: var(--nc-navy-600); }
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--nc-navy-700);
+  color: var(--nc-text);
+  border: 1px solid var(--nc-line);
+  box-shadow: var(--shadow);
+}
+.leaflet-popup-content { margin: 12px 14px; font-size: var(--text-sm); }
+.leaflet-popup-close-button { color: var(--nc-text-dim) !important; }
+
+/* The weather icon set was drawn for a dark ground, so its white clouds
+   vanish on a white card. A soft shadow gives them an edge on light
+   surfaces only; inside dark furniture they need nothing. */
+.wx-icon { filter: drop-shadow(0 1px 1.5px rgba(17, 26, 43, 0.38)); }
+.nc-header .wx-icon,
+.nc-radar .wx-icon,
+.nc-broadcast .wx-icon,
+.nc-live__stage .wx-icon,
+.nc-ticker .wx-icon,
+.nc-admin .wx-icon { filter: none; }

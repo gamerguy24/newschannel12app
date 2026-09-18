@@ -1,0 +1,69 @@
+.nc-radar {
+  position: relative;
+  width: 100%;
+  min-height: 320px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #04101c;
+  border: 1px solid var(--nc-line);
+}
+
+.nc-radar__canvas { position: absolute; inset: 0; }
+
+/* Radar tiles get a slight lift so reflectivity reads against a dark base. */
+.nc-radar-tiles {
+  filter: saturate(1.12) contrast(1.06);
+}
+
+/* ---------------------------------------------------------------- caption */
+
+/*
+ * Caption and Layers button stack in one column. They used to be positioned
+ * independently, with the button offset by a hardcoded 58px that assumed a
+ * two-line caption - so adding the scan stamp pushed the caption into it.
+ * A flex column spaces them correctly whatever the caption ends up saying.
+ */
+.nc-radar__topleft {
+  position: absolute;
+  left: 0;
+  top: var(--space-4);
+  z-index: 470;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  pointer-events: none;
+}
+.nc-radar__topleft > * { pointer-events: auto; }
+
+.nc-radar__caption {
+  min-height: 44px;
+  pointer-events: none;
+}
+.nc-radar__caption .nc-lower-third__title { font-size: var(--text-lg); }
+
+/* ------------------------------------------------------------ layers btn */
+
+.nc-radar__layers-btn {
+  margin-left: var(--space-3);
+  z-index: 490;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border: 1px solid var(--nc-line);
+  border-radius: var(--radius);
+  background: rgba(4, 16, 28, 0.9);
+  color: var(--nc-text);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.16s var(--ease-out);
+}
+.nc-radar__layers-btn:hover,
+.nc-radar__layers-btn.is-open { border-color: var(--nc-cyan); color: var(--nc-cyan-bright); }
+.nc-radar__layers-btn.is-open { opacity: 0; pointer-events: none; }

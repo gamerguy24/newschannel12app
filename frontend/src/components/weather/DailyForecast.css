@@ -1,0 +1,148 @@
+.nc-daily { list-style: none; margin: 0; padding: 0; }
+
+.nc-daily__item { border-bottom: 1px solid var(--nc-line-soft); }
+.nc-daily__item:last-child { border-bottom: none; }
+.nc-daily__item.is-open { background: var(--nc-navy-850); }
+
+.nc-daily__row {
+  display: grid;
+  grid-template-columns: 84px 44px 66px 1fr 190px 20px;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 10px var(--space-4);
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  transition: background 0.15s var(--ease-out);
+}
+.nc-daily__row:hover { background: var(--nc-surface-hover); }
+
+.nc-daily__day { display: flex; flex-direction: column; line-height: 1.15; }
+.nc-daily__day strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.nc-daily__day em {
+  font-style: normal;
+  font-size: var(--text-xs);
+  color: var(--nc-text-faint);
+}
+
+.nc-daily__pop {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-sm);
+  color: var(--nc-text-faint);
+}
+.nc-daily__pop.is-wet { color: var(--nc-cyan-bright); }
+
+.nc-daily__condition {
+  font-size: var(--text-sm);
+  color: var(--nc-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------- temp bar */
+
+.nc-daily__temps {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.nc-daily__low,
+.nc-daily__high {
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  width: 34px;
+  text-align: right;
+}
+.nc-daily__low { color: var(--nc-text-faint); }
+.nc-daily__high { color: var(--nc-text); text-align: left; }
+
+.nc-daily__bar {
+  position: relative;
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--nc-navy-600);
+  overflow: hidden;
+}
+
+.nc-daily__bar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  /* Cold end to warm end, so the bar reads as a temperature range. */
+  background: linear-gradient(90deg, #3fd8ff 0%, #7fe08a 40%, #ffd400 70%, #ff8a1f 100%);
+}
+
+.nc-daily__chevron { color: var(--nc-text-faint); transition: transform 0.2s var(--ease-out); }
+.nc-daily__item.is-open .nc-daily__chevron { transform: rotate(180deg); color: var(--nc-cyan-bright); }
+
+/* ---------------------------------------------------------------- detail */
+
+.nc-daily__detail {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: var(--space-5);
+  padding: 0 var(--space-4) var(--space-4) calc(var(--space-4) + 84px);
+}
+
+.nc-daily__detail-main h4 {
+  margin: 0 0 6px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--nc-text);
+}
+.nc-daily__night-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-3) !important;
+}
+.nc-daily__detail-main p {
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--nc-text-dim);
+}
+
+.nc-daily__detail-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+  margin: 0;
+  align-content: start;
+}
+.nc-daily__detail-stats dt {
+  font-size: 12px;
+  color: var(--nc-text-faint);
+}
+.nc-daily__detail-stats dd { margin: 2px 0 0; font-size: var(--text-base); }
+
+.nc-daily__source {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 12px;
+  color: var(--nc-text-faint);
+}
+
+@media (max-width: 1000px) {
+  .nc-daily__row { grid-template-columns: 74px 40px 58px 1fr 150px 18px; }
+  .nc-daily__condition { display: none; }
+  .nc-daily__row { grid-template-columns: 74px 40px 58px 1fr 18px; }
+}
+
+@media (max-width: 720px) {
+  .nc-daily__row { grid-template-columns: 62px 34px 52px 1fr 16px; gap: var(--space-2); padding: 10px var(--space-3); }
+  .nc-daily__day strong { font-size: 14px; }
+  .nc-daily__low, .nc-daily__high { font-size: 15px; width: 28px; }
+  .nc-daily__detail { grid-template-columns: 1fr; padding: 0 var(--space-3) var(--space-4); gap: var(--space-4); }
+}

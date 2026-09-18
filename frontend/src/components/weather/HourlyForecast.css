@@ -1,0 +1,128 @@
+.nc-hourly { position: relative; }
+
+.nc-hourly__controls { display: flex; align-items: center; gap: var(--space-2); }
+
+.nc-hourly__arrows { display: flex; gap: 3px; }
+.nc-hourly__arrows button {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--nc-line);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--nc-text-dim);
+}
+.nc-hourly__arrows button:hover { color: var(--nc-cyan-bright); border-color: var(--nc-cyan); }
+
+.nc-hourly__scroll { padding: var(--space-3) var(--space-2) var(--space-4); }
+
+.nc-hourly__track {
+  position: relative;
+  display: flex;
+  gap: 0;
+  min-width: min-content;
+}
+
+/* The trend line sits behind the columns and spans the full track width. */
+.nc-hourly__trend {
+  position: absolute;
+  inset: 46px 0 auto;
+  width: 100%;
+  height: 46px;
+  pointer-events: none;
+}
+
+.nc-hourly__col {
+  position: relative;
+  flex: none;
+  width: 74px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: var(--space-3) 4px;
+  border-right: 1px solid var(--nc-line-soft);
+  scroll-snap-align: start;
+  transition: background 0.15s var(--ease-out);
+}
+.nc-hourly__col:hover { background: var(--nc-surface-hover); }
+.nc-hourly__col:last-child { border-right: none; }
+
+/* Model-sourced hours are marked so the viewer knows where NWS data ends. */
+.nc-hourly__col.is-model::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, var(--nc-violet) 0 4px, transparent 4px 8px);
+  opacity: 0.55;
+}
+
+.nc-hourly__daymark {
+  position: absolute;
+  top: 0;
+  left: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--nc-cyan-bright);
+}
+
+.nc-hourly__time {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--nc-text-dim);
+  margin-top: 10px;
+}
+
+.nc-hourly__temp {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.nc-hourly__metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--nc-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.nc-hourly__metric.is-wet { color: var(--nc-cyan-bright); }
+
+.nc-hourly__wind {
+  font-size: 11px;
+  color: var(--nc-text-faint);
+  white-space: nowrap;
+}
+
+.nc-hourly__storm {
+  font-size: 11px;
+  color: #c2410c;
+}
+.nc-hourly__storm.is-high { color: var(--nc-red-bright); font-weight: 700; }
+.nc-hourly__storm.is-none { color: var(--nc-navy-500); }
+
+.nc-hourly__more {
+  display: block;
+  width: 100%;
+  padding: var(--space-3);
+  border: none;
+  border-top: 1px solid var(--nc-line-soft);
+  background: transparent;
+  color: var(--nc-cyan-bright);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.nc-hourly__more:hover { background: var(--nc-surface-hover); }
+
+@media (max-width: 720px) {
+  .nc-hourly__col { width: 66px; }
+  .nc-hourly__temp { font-size: 17px; }
+  .nc-hourly__controls .nc-hourly__arrows { display: none; }
+}

@@ -1,0 +1,51 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "storm12-weather",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-09-18",
+  // The NEXRAD decoder needs node:zlib and Buffer; the rest of the app is
+  // plain fetch. nodejs_compat is what makes that decoder portable.
+  "compatibility_flags": ["nodejs_compat"],
+
+  // One Worker serves the site and the API: /api/* runs Worker code first,
+  // real files are served straight from the edge, and every other path falls
+  // back to index.html so the SPA can route it.
+  "assets": {
+    "directory": "./frontend/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+
+  // The newsroom's settings, closings, viewer alerts and the graphic on
+  // program. A Durable Object rather than KV because a take must be visible
+  // to the playout page on its very next poll, one second later.
+  "durable_objects": {
+    "bindings": [{ "name": "NEWSROOM", "class_name": "Newsroom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Newsroom"] }],
+
+  // Decoding a Level III sweep is real computation: bzip2, rasterise, PNG.
+  // Well inside this ceiling, and far outside the free plan's 10ms.
+  "limits": { "cpu_ms": 60000 },
+
+  "observability": { "enabled": true },
+  "dev": { "port": 8787 },
+
+  "vars": {
+    "NODE_ENV": "production",
+    "NWS_USER_AGENT": "Storm12Weather/1.0 (contact@storm12weather.example)",
+    "DEFAULT_LAT": "36.1627",
+    "DEFAULT_LON": "-86.7816",
+    "DEFAULT_LOCATION_NAME": "Nashville, TN",
+    "DEFAULT_RADAR_SITE": "KOHX",
+    "COVERAGE_STATES": "TN,KY,AL",
+    "RADAR_STATES": "TN,AL,KY,AR,NC,SC,GA",
+    "TICKER_MARKETS": "Nashville:36.1627:-86.7816,Murfreesboro:35.8456:-86.3903,Franklin:35.9251:-86.8689,Clarksville:36.5298:-87.3595,Columbia:35.6151:-87.0353,Cookeville:36.1628:-85.5016,Bowling Green:36.9685:-86.4808,Huntsville:34.7304:-86.5861",
+    "LIVE_STREAM_URL": "",
+    "LIVE_STREAM_TYPE": "hls",
+    "SPONSOR_NAME": "",
+    "SPONSOR_TAGLINE": "",
+    "CORS_ORIGINS": ""
+  }
+}

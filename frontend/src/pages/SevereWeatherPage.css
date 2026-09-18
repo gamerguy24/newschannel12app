@@ -1,0 +1,235 @@
+.nc-swc__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+}
+
+.nc-swc__coverage {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 6px 0 0;
+  font-size: var(--text-sm);
+  color: var(--nc-text-dim);
+}
+
+/* ---------------------------------------------------------------- counts */
+
+.nc-swc__counts { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+
+.nc-swc__count {
+  min-width: 92px;
+  padding: var(--space-3);
+  border: 1px solid var(--nc-line);
+  border-radius: var(--radius);
+  background: var(--nc-surface);
+  text-align: center;
+}
+
+.nc-swc__count-value {
+  display: block;
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--nc-text-faint);
+}
+
+.nc-swc__count-label {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--nc-text-faint);
+}
+
+/* Tier colours are tuned as fills; as text on white they are darkened. */
+.nc-swc__count.is-live.is-warning { border-color: var(--nc-tier-severe); }
+.nc-swc__count.is-live.is-warning .nc-swc__count-value { color: color-mix(in srgb, var(--nc-tier-severe) 60%, #111a2b); }
+.nc-swc__count.is-live.is-watch { border-color: var(--nc-tier-moderate); }
+.nc-swc__count.is-live.is-watch .nc-swc__count-value { color: color-mix(in srgb, var(--nc-tier-moderate) 50%, #111a2b); }
+.nc-swc__count.is-live.is-advisory { border-color: var(--nc-tier-minor); }
+.nc-swc__count.is-live.is-advisory .nc-swc__count-value { color: color-mix(in srgb, var(--nc-tier-minor) 55%, #111a2b); }
+.nc-swc__count.is-live.is-tornado {
+  border-color: var(--nc-tier-catastrophic);
+  background: rgba(255, 27, 27, 0.12);
+}
+.nc-swc__count.is-live.is-tornado .nc-swc__count-value {
+  color: var(--nc-tier-catastrophic);
+  animation: nc-blink 1.4s steps(2) infinite;
+}
+
+/* -------------------------------------------------------------- outlooks */
+
+.nc-swc__outlooks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+}
+
+.nc-swc__outlook {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-3);
+  border: 1px solid var(--nc-line);
+  border-left: 4px solid var(--risk);
+  border-radius: var(--radius);
+  background: var(--nc-surface-raised);
+  color: var(--nc-text);
+}
+.nc-swc__outlook:hover { text-decoration: none; border-color: var(--risk); }
+
+.nc-swc__outlook-day {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--nc-text-dim);
+}
+
+/* The SPC palette is built for a dark map - yellow and pale green vanish on
+   a white card - so the risk colour lives on the border and scale, and the
+   label itself stays in text colour. */
+.nc-swc__outlook-risk {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--nc-text);
+}
+
+.nc-swc__outlook-scale { display: flex; gap: 3px; }
+.nc-swc__outlook-scale span {
+  flex: 1;
+  height: 5px;
+  border-radius: 2px;
+  background: var(--nc-navy-600);
+}
+.nc-swc__outlook-scale span.is-on { background: var(--risk); }
+
+/* --------------------------------------------------------------- filters */
+
+.nc-swc__filters { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.nc-swc__county {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--nc-line);
+  border-radius: var(--radius);
+  background: var(--nc-surface);
+  color: var(--nc-text);
+  outline: none;
+}
+.nc-swc__county:focus { border-color: var(--nc-cyan); }
+
+.nc-swc__section-count {
+  font-size: var(--text-sm);
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--nc-navy-700);
+  color: var(--nc-text-dim);
+}
+
+/* ---------------------------------------------------------------- alerts */
+
+.nc-swc__alerts { list-style: none; margin: 0; padding: 0; }
+
+.nc-swc__alert { border-bottom: 1px solid var(--nc-line-soft); }
+.nc-swc__alert:last-child { border-bottom: none; }
+.nc-swc__alert.is-open { background: var(--nc-surface); }
+
+.nc-swc__alert > button {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  transition: background 0.15s var(--ease-out);
+}
+.nc-swc__alert > button:hover { background: var(--nc-surface-hover); }
+
+.nc-swc__alert-bar { flex: none; width: 4px; background: var(--c); }
+
+.nc-swc__alert-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 11px 0;
+}
+
+.nc-swc__alert-top { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.nc-swc__alert-top strong {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: color-mix(in srgb, var(--c) 55%, #111a2b);
+}
+
+.nc-swc__alert-office {
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--nc-text-faint);
+}
+
+.nc-swc__alert-areas {
+  font-size: var(--text-sm);
+  color: var(--nc-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nc-swc__alert-times {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1px;
+  padding: 11px var(--space-4) 11px 0;
+  font-size: var(--text-xs);
+  color: var(--nc-text-dim);
+}
+.nc-swc__alert-times em { font-style: normal; font-size: 10px; color: var(--nc-text-faint); }
+
+.nc-swc__alert-detail {
+  padding: 0 var(--space-4) var(--space-4) calc(var(--space-3) + 4px);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--nc-text-dim);
+  white-space: pre-line;
+  max-height: 400px;
+  overflow-y: auto;
+}
+.nc-swc__alert-detail .is-headline { color: var(--nc-text); font-weight: 600; }
+.nc-swc__alert-detail .is-storm {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 180, 230, 0.1);
+  color: var(--nc-cyan-bright);
+  font-size: var(--text-xs);
+}
+.nc-swc__alert-detail .is-instruction {
+  padding-left: 10px;
+  border-left: 3px solid var(--nc-brand-red);
+  color: var(--nc-text);
+}
+
+@media (max-width: 860px) {
+  .nc-swc__header { align-items: flex-start; }
+  .nc-swc__counts { width: 100%; }
+  .nc-swc__count { flex: 1; min-width: 0; }
+  .nc-swc__alert > button { flex-wrap: wrap; }
+  .nc-swc__alert-times {
+    width: 100%;
+    align-items: flex-start;
+    flex-direction: row;
+    gap: var(--space-3);
+    padding: 0 var(--space-4) 10px calc(var(--space-3) + 4px);
+  }
+}

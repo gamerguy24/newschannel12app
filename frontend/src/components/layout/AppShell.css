@@ -1,0 +1,26 @@
+.nc-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.nc-shell__main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  /* Room for the fixed ticker (and the mobile nav underneath it). */
+  padding-bottom: calc(var(--ticker-h) + var(--space-4));
+}
+
+@media (max-width: 860px) {
+  .nc-shell__main {
+    padding-bottom: calc(var(--ticker-h) + var(--mobile-nav-h) + env(safe-area-inset-bottom) + var(--space-3));
+  }
+}
+
+/* Full-bleed pages (radar, weather map) opt out of the page gutter. */
+.nc-page--bleed {
+  max-width: none;
+  padding: 0;
+  gap: 0;
+}

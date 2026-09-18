@@ -1,0 +1,24 @@
+/* Conditions and radar lead side by side: the two things a viewer opens a
+   station weather page for, at equal height. */
+.nc-home__lead {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: var(--space-5);
+  align-items: stretch;
+}
+
+.nc-home__lead > * { min-width: 0; }
+
+.nc-home__degraded {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--nc-line);
+  border-left: 3px solid var(--nc-gold);
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--nc-text-dim);
+}
+
+@media (max-width: 1100px) {
+  .nc-home__lead { grid-template-columns: 1fr; }
+}

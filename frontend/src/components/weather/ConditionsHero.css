@@ -1,0 +1,147 @@
+.nc-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 22px 24px 18px;
+  background: var(--nc-surface);
+  border: 1px solid var(--nc-line);
+  border-radius: var(--radius);
+  min-width: 0;
+}
+
+.nc-hero__place {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.nc-hero__meta {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: var(--nc-text-faint);
+}
+
+/* ------------------------------------------------------------------- now */
+
+.nc-hero__now {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+/* The one place the condensed display face appears on the page: a
+   temperature is read across a room, and this is the face built for that. */
+.nc-hero__temp {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(4.25rem, 7vw, 6.25rem);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  color: var(--nc-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.nc-hero__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding-left: 4px;
+}
+
+.nc-hero__condition {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.nc-hero__range {
+  display: flex;
+  gap: 14px;
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--nc-text-dim);
+}
+.nc-hero__range strong {
+  color: var(--nc-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.nc-hero__feels {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--nc-text-dim);
+}
+
+/* ----------------------------------------------------------------- stats */
+
+/* A plain two-column label/value list: the way a station page presents
+   readings, rather than a grid of boxed tiles. */
+.nc-hero__stats {
+  display: grid;
+  /* Two columns in the home page's side column, three on a full-width page.
+     Capped at three so six readings always land as even rows - an open
+     auto-fill put five on a row and stranded "Sunset" on its own. */
+  grid-template-columns: repeat(auto-fit, minmax(max(230px, calc((100% - 56px) / 3)), 1fr));
+  column-gap: 28px;
+  /* Sits at the foot of the card when it stretches to the radar's height. */
+  margin: auto 0 0;
+  border-top: 1px solid var(--nc-line-soft);
+}
+
+/* ---------------------------------------------------------------- today */
+
+.nc-hero__today {
+  padding: 14px 16px;
+  border-radius: 6px;
+  background: var(--nc-navy-850);
+}
+
+.nc-hero__today-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--nc-text-dim);
+}
+
+.nc-hero__today-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--nc-text);
+}
+
+.nc-hero__stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--nc-line-soft);
+  min-width: 0;
+}
+
+.nc-hero__stat dt {
+  font-size: 13.5px;
+  color: var(--nc-text-dim);
+  white-space: nowrap;
+}
+
+.nc-hero__stat dd {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 560px) {
+  .nc-hero { padding: 18px 16px 14px; }
+  .nc-hero__now { flex-wrap: wrap; gap: 12px; }
+  .nc-hero__stats { grid-template-columns: 1fr; }
+}

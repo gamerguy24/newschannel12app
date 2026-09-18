@@ -1,0 +1,54 @@
+.nc-closings-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 7px var(--space-4);
+  border-bottom: 1px solid var(--nc-line);
+  background: var(--nc-surface);
+}
+
+.nc-closings-bar__tag {
+  flex: none;
+  padding: 2px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--nc-brand-navy);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+  color: #fff;
+}
+
+.nc-closings-bar__text {
+  flex: 1 1 auto;
+  margin: 0;
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--nc-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nc-closings-bar__link {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nc-closings-bar__close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--nc-text-faint);
+  cursor: pointer;
+}
+.nc-closings-bar__close:hover { background: var(--nc-surface-hover); color: var(--nc-text); }
+
+@media (max-width: 620px) {
+  .nc-closings-bar__link { display: none; }
+}

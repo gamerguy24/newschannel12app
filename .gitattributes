@@ -1,0 +1,15 @@
+# Keep the repository LF-only, including on Windows checkouts.
+#
+# Git's autocrlf rewrites these files to CRLF on checkout, which has already
+# cost this project once: tooling that edits by matching multi-line anchors
+# silently stops matching, and every file shows as wholly changed in a diff.
+* text=auto eol=lf
+
+# Binary assets Git must never touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary

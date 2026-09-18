@@ -1,0 +1,110 @@
+.nc-counties__sub {
+  margin: 6px 0 0;
+  max-width: 72ch;
+  font-size: var(--text-sm);
+  color: var(--nc-text-dim);
+}
+
+.nc-counties__count {
+  font-size: var(--text-sm);
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--nc-text-dim);
+}
+
+.nc-counties__controls { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.nc-counties__controls input {
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid var(--nc-line);
+  border-radius: var(--radius);
+  background: var(--nc-surface);
+  color: var(--nc-text);
+  outline: none;
+}
+.nc-counties__controls input:focus { border-color: var(--nc-cyan); }
+
+.nc-counties__grid {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-3);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
+  gap: var(--space-2);
+}
+.nc-counties__grid--page { padding: 0; }
+
+.nc-county {
+  position: relative;
+  border: 1px solid var(--nc-line);
+  border-radius: var(--radius);
+  background: var(--nc-surface-raised);
+  transition: border-color 0.16s var(--ease-out), transform 0.16s var(--ease-out);
+}
+.nc-county:hover { border-color: var(--nc-cyan); transform: translateY(-1px); }
+
+.nc-county.is-warned {
+  border-color: var(--nc-tier-severe);
+  background: linear-gradient(120deg, rgba(255, 162, 0, 0.13), var(--nc-surface-raised) 60%);
+}
+.nc-county.is-watched { border-color: var(--nc-tier-moderate); }
+
+.nc-county a {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 11px var(--space-3);
+  padding-right: 34px;
+  color: var(--nc-text);
+}
+.nc-county a:hover { text-decoration: none; }
+
+.nc-county__name {
+  font-size: var(--text-base);
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.nc-county__meta {
+  font-size: 12px;
+  color: var(--nc-text-faint);
+}
+
+.nc-county__flag {
+  margin-top: 4px;
+  align-self: flex-start;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: var(--nc-tier-severe);
+  color: #1a1000;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.nc-county.is-watched .nc-county__flag { background: var(--nc-tier-moderate); }
+
+.nc-county__fav {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--nc-text-faint);
+}
+.nc-county__fav:hover { background: rgba(255, 255, 255, 0.08); color: #d97706; }
+.nc-county__fav.is-on { color: #d97706; }
+
+@media (max-width: 620px) {
+  .nc-counties__grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .nc-county__name { font-size: var(--text-base); }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "@nc12/backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/routes/weather.js",
+  "scripts": {},
+  "dependencies": {
+    "seek-bzip": "^2.0.0"
+  },
+  "description": "Storm 12 Weather - services and API routes, imported by the Cloudflare Worker"
+}

@@ -1,0 +1,61 @@
+.nc-newsroom__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.nc-newsroom__sub {
+  margin: 6px 0 0;
+  max-width: 74ch;
+  font-size: var(--text-sm);
+  color: var(--nc-text-dim);
+}
+
+.nc-newsroom__filters {
+  display: flex;
+  gap: var(--space-2);
+  padding-bottom: 4px;
+}
+
+.nc-newsroom__skeletons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+
+/* The lead story runs full width above the grid, the way a rundown leads. */
+.nc-newsroom__lead .nc-news--row { border-color: var(--nc-cyan-deep); }
+
+.nc-newsroom__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  gap: var(--space-4);
+}
+
+.nc-newsroom__failures {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.nc-newsroom__failures li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--nc-text-dim);
+}
+.nc-newsroom__failures strong {
+  font-family: var(--font-display);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--nc-text);
+}
+
+@media (max-width: 860px) {
+  .nc-newsroom__header { flex-direction: column; }
+  .nc-newsroom__grid { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,39 @@
+.nc-radar-preview { position: relative; }
+.nc-radar-preview .nc-radar { border: none; border-radius: 0; }
+
+.nc-radar-preview__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 420px;
+  background: #04101c;
+}
+
+.nc-radar-preview__full {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nc-radar-preview__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 9px var(--space-4);
+  border-top: 1px solid var(--nc-line-soft);
+  font-size: 12.5px;
+  color: var(--nc-text-dim);
+}
+.nc-radar-preview__hint { color: var(--nc-text-faint); }
+
+@media (max-width: 720px) {
+  .nc-radar-preview__hint { display: none; }
+}
+
+/* On the home page the panel title already names the radar; the map's own
+   on-air lower-third would say it twice and collide with town labels.
+   Broadcast Mode keeps that caption - there it is the point. */
+.nc-radar-preview .nc-radar__topleft { display: none; }

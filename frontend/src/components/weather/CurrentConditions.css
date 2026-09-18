@@ -1,0 +1,139 @@
+.nc-cc { display: flex; flex-direction: column; gap: var(--space-5); }
+
+.nc-cc__loading { display: flex; gap: var(--space-4); }
+
+.nc-cc__station {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 12.5px;
+  color: var(--nc-text-faint);
+}
+.nc-cc__station em { font-style: normal; }
+
+@media (max-width: 900px) {
+  .nc-cc__details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ------------------------------------------------------------------ hero */
+
+.nc-cc__hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.nc-cc__hero-text { min-width: 0; }
+
+.nc-cc__place {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--nc-text);
+}
+
+.nc-cc__temp {
+  margin: -6px 0 0;
+  font-family: var(--font-display);
+  font-size: var(--text-hero);
+  font-weight: 800;
+  line-height: 0.88;
+  letter-spacing: -0.03em;
+  color: var(--nc-text);
+}
+
+
+.nc-cc__condition {
+  margin: var(--space-2) 0 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.nc-cc__feels {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  color: var(--nc-text-dim);
+}
+.nc-cc__feels strong { color: var(--nc-text); font-size: var(--text-base); }
+
+/* --------------------------------------------------------------- details */
+
+/* Eight readings, laid out as two even rows of four. An auto-fit grid packed
+   six into the first row and stranded two in a ragged second one. */
+.nc-cc__details {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--nc-line-soft);
+  border: 1px solid var(--nc-line-soft);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.nc-cc__detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  background: var(--nc-surface);
+  min-width: 0;
+}
+.nc-cc__detail.is-missing .nc-cc__detail-value {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--nc-text-faint);
+}
+
+.nc-cc__detail-label {
+  font-size: 12px;
+  color: var(--nc-text-faint);
+}
+
+.nc-cc__detail-value {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.nc-cc__detail-hint {
+  /* Reserved even when empty, so every cell in a row is the same height. */
+  min-height: 1.35em;
+  font-size: var(--text-xs);
+  color: var(--nc-text-dim);
+  text-transform: capitalize;
+}
+
+/* --------------------------------------------------------------- sun arc */
+
+.nc-sun-arc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  border: 1px solid var(--nc-line-soft);
+  border-radius: var(--radius);
+  background: transparent;
+}
+
+.nc-sun-arc__times {
+  display: flex;
+  justify-content: space-between;
+}
+.nc-sun-arc__times span { display: flex; flex-direction: column; gap: 1px; }
+.nc-sun-arc__times em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--nc-text-faint);
+}
+.nc-sun-arc__times strong { font-size: var(--text-base); font-weight: 600; }
+.nc-sun-arc__times span:last-child { text-align: right; }
+
+@media (max-width: 720px) {
+  .nc-cc__hero { gap: var(--space-3); }
+  .nc-cc__condition { font-size: var(--text-lg); }
+  .nc-cc__details { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 380px) {
+  .nc-cc__hero > .wx-icon { width: 74px; height: 74px; }
+}

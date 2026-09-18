@@ -1,0 +1,27 @@
+{
+  "name": "news-channel-12-weather",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Storm 12 Weather - broadcast-grade local weather, radar and severe weather platform",
+  "type": "module",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n API,WEB -c cyan,magenta \"npm:dev:api\" \"npm:dev:frontend\"",
+    "dev:api": "wrangler dev --port 8787",
+    "dev:frontend": "npm --workspace frontend run dev",
+    "build": "npm --workspace frontend run build",
+    "start": "npm run build && wrangler dev --port 8787",
+    "deploy": "npm run build && wrangler deploy",
+    "typecheck": "npm --workspace frontend run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "wrangler": "^4.134.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

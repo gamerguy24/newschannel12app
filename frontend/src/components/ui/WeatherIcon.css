@@ -1,0 +1,77 @@
+.wx-icon {
+  display: block;
+  flex: none;
+  overflow: visible;
+}
+
+/* Motion is opt-in per icon and disabled wholesale under reduced motion
+   (see global.css), so a forecast strip never becomes a distraction. */
+.wx-icon--animated .wx-sun__rays {
+  transform-origin: 32px 30px;
+  animation: wx-rotate 22s linear infinite;
+}
+
+.wx-icon--animated .wx-drop {
+  animation: wx-fall 1.1s ease-in infinite;
+}
+
+.wx-icon--animated .wx-flake {
+  animation: wx-drift 2.6s ease-in-out infinite;
+}
+
+.wx-icon--animated .wx-bolt {
+  animation: wx-flash 2.4s steps(1) infinite;
+}
+
+.wx-icon--animated .wx-fog-line {
+  animation: wx-slide 3.4s ease-in-out infinite;
+}
+
+.wx-icon--animated .wx-wind-line {
+  animation: wx-gust 2.6s ease-in-out infinite;
+}
+
+.wx-icon--animated .wx-tornado-band {
+  animation: wx-wobble 1.4s ease-in-out infinite alternate;
+}
+
+.wx-icon--animated .wx-hurricane {
+  transform-origin: 32px 32px;
+  animation: wx-rotate 14s linear infinite;
+}
+
+@keyframes wx-rotate {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes wx-fall {
+  0% { opacity: 0; transform: translateY(-6px); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(8px); }
+}
+
+@keyframes wx-drift {
+  0%, 100% { opacity: 0.35; transform: translate(0, -3px); }
+  50% { opacity: 1; transform: translate(2px, 5px); }
+}
+
+@keyframes wx-flash {
+  0%, 62%, 100% { opacity: 1; }
+  66%, 72% { opacity: 0.25; }
+  69% { opacity: 1; }
+}
+
+@keyframes wx-slide {
+  0%, 100% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
+}
+
+@keyframes wx-gust {
+  0%, 100% { transform: translateX(-2px); opacity: 0.7; }
+  50% { transform: translateX(3px); opacity: 1; }
+}
+
+@keyframes wx-wobble {
+  from { transform: translateX(-1.5px); }
+  to { transform: translateX(1.5px); }
+}
