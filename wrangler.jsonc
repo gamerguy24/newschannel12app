@@ -25,9 +25,13 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Newsroom"] }],
 
-  // Decoding a Level III sweep is real computation: bzip2, rasterise, PNG.
-  // Well inside this ceiling, and far outside the free plan's 10ms.
-  "limits": { "cpu_ms": 60000 },
+  // No explicit CPU limit. Decoding a Level III sweep is real computation -
+  // bzip2, rasterise, PNG, about 250ms - but the Paid plan already allows 30
+  // seconds by default, so asking for more bought nothing and made the config
+  // undeployable on the Free plan, which rejects the field outright.
+  //
+  // Radar still needs the Paid plan at runtime: Free caps CPU at 10ms per
+  // request. Everything else here is I/O-bound and fits either way.
 
   // The Worker serves frontend/dist, so a deploy must never run without a
   // fresh build of it. Keeping this here means a CI job that only runs
