@@ -32,9 +32,15 @@ Workers & Pages → your Worker → Settings → Builds → connect the reposito
 
 | Setting | Value |
 |---|---|
-| Build command | `npm run build` |
+| Build command | leave empty |
 | Deploy command | `npx wrangler deploy` |
 | Root directory | `/` |
+
+The build command can be empty because `wrangler.jsonc` carries a build hook:
+`wrangler deploy` runs `npm run build` itself before uploading. The Worker
+serves `frontend/dist`, and a deploy that skipped the site build would fail
+outright - so the build belongs with the deploy, not in a CI field somebody
+has to remember to fill in.
 
 A Pages project cannot run this app: Pages serves static files, and every
 `/api` call would 404.

@@ -29,6 +29,14 @@
   // Well inside this ceiling, and far outside the free plan's 10ms.
   "limits": { "cpu_ms": 60000 },
 
+  // The Worker serves frontend/dist, so a deploy must never run without a
+  // fresh build of it. Keeping this here means a CI job that only runs
+  // `wrangler deploy` still ships the current site.
+  "build": {
+    "command": "npm run build",
+    "watch_dir": "frontend/src"
+  },
+
   "observability": { "enabled": true },
   "dev": { "port": 8787 },
 
