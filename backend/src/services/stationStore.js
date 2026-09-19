@@ -455,6 +455,7 @@ const PROGRAM_TEMPLATES = [
   'heatindex',
   'compare',
   'alertmap',
+  'spcmap',
   'headlines',
   'quote',
   'alert',
@@ -522,6 +523,18 @@ export function setProgram(payload) {
     color: hexColor(area?.color),
     rank: num(area?.rank) ?? 99,
   }));
+  // Risk polygons, already simplified by the studio. Capped so one graphic
+  // cannot fill the newsroom's storage with continental geometry.
+  const outlook = (Array.isArray(payload.outlook) ? payload.outlook : []).slice(0, 8).map((shape) => ({
+    level: num(shape?.level) ?? 0,
+    label: text(shape?.label, 40),
+    color: hexColor(shape?.color),
+    rings: (Array.isArray(shape?.rings) ? shape.rings : []).slice(0, 12).map((ring) =>
+      (Array.isArray(ring) ? ring : [])
+        .slice(0, 600)
+        .map((pt) => [num(pt?.[0]) ?? 0, num(pt?.[1]) ?? 0]),
+    ),
+  }));
   const outlooks = (Array.isArray(payload.outlooks) ? payload.outlooks : []).slice(0, 3).map((outlook) => ({
     day: text(outlook?.day, 8),
     label: text(outlook?.label, 60),
@@ -540,6 +553,7 @@ export function setProgram(payload) {
     places,
     outlooks,
     areas,
+    outlook,
     icon: text(payload.icon, 40) || 'cloudy',
     stamp: text(payload.stamp, 60),
     station: text(payload.station, 60) || getStationIdentity().name,

@@ -4,7 +4,7 @@ import { Button } from '../ui/Primitives';
 import { GRAPHIC_TEMPLATES, GraphicSvg, H, W, isOverlay, templateDef, templateName, type Fields } from '../graphics/templates';
 import { useLocation } from '../../context/LocationContext';
 import { useResource } from '../../hooks';
-import { getCurrent, getDaily, getHourly, getMarkets, getSevereCenter } from '../../services/weather';
+import { getCurrent, getDaily, getHourly, getMarkets, getSevereCenter, getSpcOutlook } from '../../services/weather';
 import { clearProgram, deleteGraphic, saveGraphic, takeProgram } from '../../services/admin';
 import { formatDayName, formatRelative, formatTemp, formatTime, formatWind } from '../../utils/format';
 import type {
@@ -13,6 +13,7 @@ import type {
   GraphicDay,
   GraphicHour,
   GraphicOutlook,
+  GraphicOutlookShape,
   GraphicPlace,
   GraphicSnapshot,
   ProgramGraphic,
@@ -97,6 +98,7 @@ export function GraphicsStudio({ state, onSaved }: { state: AdminState; onSaved:
   const [program, setProgram] = useState<ProgramGraphic | null>(state.program ?? null);
   const [busy, setBusy] = useState(false);
   const [safeAreas, setSafeAreas] = useState(false);
+  const [outlook, setOutlook] = useState<GraphicOutlookShape[]>([]);
   const [copied, setCopied] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -224,6 +226,8 @@ export function GraphicsStudio({ state, onSaved }: { state: AdminState; onSaved:
       stamp,
       station,
       market,
+      // Risk polygons ride only with the graphic that draws them.
+      outlook: tpl === 'spcmap' ? outlook : [],
     };
   };
 
@@ -234,6 +238,88 @@ export function GraphicsStudio({ state, onSaved }: { state: AdminState; onSaved:
   const outputUrl = `${window.location.origin}/output`;
 
   const set = (key: string, value: string) => setFields((prev) => ({ ...prev, [key]: value }));
+
+  /* ----------------------------------------------------------- outlook */
+
+  const DAY_LABEL: Record<string, string> = {
+    day1: 'Day 1 · Today',
+    day2: 'Day 2 · Tomorrow',
+    day3: 'Day 3',
+  };
+
+  /**
+   * Pull the Storm Prediction Center outlook and keep the parts that reach
+   * this market. SPC publishes continental polygons with far more detail than
+   * a regional map can show, so rings are thinned and rounded before they are
+   * carried to air - otherwise a single take would be megabytes of geometry.
+   */
+  const plotOutlook = async (day: string) => {
+    if (places.length < 2) {
+      setNote('Waiting for the market list before the outlook can be placed.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const data = await getSpcOutlook(day, 'cat');
+      const lats = places.map((p) => p.lat);
+      const lons = places.map((p) => p.lon);
+      const pad = 2.5;
+      const box = {
+        west: Math.min(...lons) - pad,
+        east: Math.max(...lons) + pad,
+        south: Math.min(...lats) - pad,
+        north: Math.max(...lats) + pad,
+      };
+
+      const shapes: GraphicOutlookShape[] = [];
+      for (const feature of data.features ?? []) {
+        const props = (feature.properties ?? {}) as { level?: number; label?: string; color?: string };
+        const geometry = feature.geometry;
+        if (!geometry) continue;
+        const polygons =
+          geometry.type === 'Polygon'
+            ? [geometry.coordinates]
+            : geometry.type === 'MultiPolygon'
+              ? geometry.coordinates
+              : [];
+
+        const rings: Array<Array<[number, number]>> = [];
+        for (const polygon of polygons) {
+          for (const ring of polygon) {
+            const reaches = ring.some(
+              (pt) => pt[0] >= box.west && pt[0] <= box.east && pt[1] >= box.south && pt[1] <= box.north,
+            );
+            if (!reaches) continue;
+            const step = Math.max(1, Math.ceil(ring.length / 400));
+            const thinned = ring
+              .filter((_, i) => i % step === 0)
+              .map((pt) => [Math.round(pt[0] * 100) / 100, Math.round(pt[1] * 100) / 100] as [number, number]);
+            if (thinned.length > 3) rings.push(thinned);
+          }
+        }
+        if (rings.length) {
+          shapes.push({
+            level: props.level ?? 0,
+            label: props.label ?? 'Risk',
+            color: props.color ?? '#8FA3BF',
+            rings,
+          });
+        }
+      }
+
+      setOutlook(shapes);
+      if (!fields.detail) set('detail', DAY_LABEL[day] ?? day);
+      setNote(
+        shapes.length
+          ? `Plotted ${shapes.length} risk area${shapes.length === 1 ? '' : 's'} for ${DAY_LABEL[day] ?? day}.`
+          : `No risk areas reach the coverage area for ${DAY_LABEL[day] ?? day}.`,
+      );
+    } catch (err) {
+      setNote((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   /* ------------------------------------------------------------ playout */
 
@@ -522,7 +608,15 @@ export function GraphicsStudio({ state, onSaved }: { state: AdminState; onSaved:
               {def.fields.map((field) => (
                 <div key={field.key} className={field.wide || field.type === 'area' ? 'is-wide' : undefined}>
                   <Field label={field.label} help={field.help}>
-                    {field.type === 'area' ? (
+                    {field.type === 'select' ? (
+                      <select value={fields[field.key] ?? ''} onChange={(e) => set(field.key, e.target.value)}>
+                        {(field.options ?? []).map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : field.type === 'area' ? (
                       <textarea value={fields[field.key] ?? ''} onChange={(e) => set(field.key, e.target.value)} />
                     ) : (
                       <input
@@ -535,6 +629,34 @@ export function GraphicsStudio({ state, onSaved }: { state: AdminState; onSaved:
                 </div>
               ))}
             </div>
+
+            {template === 'spcmap' && (
+              <div className="nc-studio__plot">
+                <Button size="sm" variant="outline" disabled={busy} onClick={() => plotOutlook('day1')}>
+                  Plot today
+                </Button>
+                <Button size="sm" variant="outline" disabled={busy} onClick={() => plotOutlook('day2')}>
+                  Plot tomorrow
+                </Button>
+                <Button size="sm" variant="outline" disabled={busy} onClick={() => plotOutlook('day3')}>
+                  Plot day 3
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={!outlook.length}
+                  onClick={() => {
+                    setOutlook([]);
+                    setNote('Outlook cleared.');
+                  }}
+                >
+                  Clear
+                </Button>
+                <span className="nc-studio__hint">
+                  {outlook.length ? `${outlook.length} risk area${outlook.length === 1 ? '' : 's'} plotted` : 'Nothing plotted yet'}
+                </span>
+              </div>
+            )}
 
             <div className="nc-studio__save">
               <Field label="Rundown name">

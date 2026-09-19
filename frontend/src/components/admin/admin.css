@@ -512,6 +512,13 @@
 .nc-studio__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
 .nc-studio__fields .is-wide { grid-column: 1 / -1; }
 .nc-studio__hint { margin: 0; font-size: 12px; color: var(--nc-text-faint); }
+.nc-studio__plot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
 .nc-studio__save {
   display: flex;
   align-items: flex-end;

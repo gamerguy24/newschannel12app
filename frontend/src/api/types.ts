@@ -566,6 +566,15 @@ export interface GraphicOutlook {
   color: string;
 }
 
+/** One SPC risk area, simplified for transport and drawn by the outlook map. */
+export interface GraphicOutlookShape {
+  level: number;
+  label: string;
+  color: string;
+  /** Rings of [lon, lat]. */
+  rings: Array<Array<[number, number]>>;
+}
+
 /** Everything a graphic template draws from, with every value resolved. */
 export interface GraphicSnapshot {
   template: string;
@@ -575,6 +584,7 @@ export interface GraphicSnapshot {
   places?: GraphicPlace[];
   outlooks?: GraphicOutlook[];
   areas?: GraphicAlertArea[];
+  outlook?: GraphicOutlookShape[];
   icon: string;
   stamp: string;
   station: string;

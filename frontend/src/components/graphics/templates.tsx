@@ -4,6 +4,7 @@ import { getCountyBoundaries } from '../../services/weather';
 import { formatDayName, formatTemp } from '../../utils/format';
 import type {
   GraphicAlertArea,
+  GraphicOutlookShape,
   GraphicDay,
   GraphicHour,
   GraphicOutlook,
@@ -49,7 +50,9 @@ const RAIN = '#7fc4ff';
 export interface TemplateField {
   key: string;
   label: string;
-  type?: 'text' | 'area';
+  type?: 'text' | 'area' | 'select';
+  /** Choices for a 'select' field. */
+  options?: Array<{ value: string; label: string }>;
   /** Filled from the live observation unless the operator types over it. */
   live?: boolean;
   wide?: boolean;
@@ -134,6 +137,16 @@ export const GRAPHIC_TEMPLATES: TemplateDef[] = [
     group: 'Full screen',
     hint: 'The day-ahead heads-up: name the hazard and when it arrives.',
     fields: [
+      {
+        key: 'scene',
+        label: 'Backdrop',
+        type: 'select',
+        options: [
+          { value: 'sunset', label: 'Heat - low sun' },
+          { value: 'storm', label: 'Storm - heavy cloud' },
+          { value: 'winter', label: 'Winter - snow' },
+        ],
+      },
       { key: 'kicker', label: 'Banner', wide: true, placeholder: 'Weather Alert Day' },
       { key: 'when', label: 'When', wide: true, placeholder: 'Today through Saturday' },
       { key: 'what', label: 'What', type: 'area', wide: true, placeholder: 'Extreme heat and high humidity' },
@@ -155,6 +168,16 @@ export const GRAPHIC_TEMPLATES: TemplateDef[] = [
     group: 'Full screen',
     hint: 'The next four days, forecast high against apparent temperature.',
     fields: [
+      {
+        key: 'scene',
+        label: 'Backdrop',
+        type: 'select',
+        options: [
+          { value: 'sunset', label: 'Heat - low sun' },
+          { value: 'storm', label: 'Storm - heavy cloud' },
+          { value: 'winter', label: 'Winter - snow' },
+        ],
+      },
       { key: 'kicker', label: 'Title', wide: true, placeholder: 'Highs vs Feels Like' },
       { key: 'detail', label: 'Subtitle', wide: true },
     ],
@@ -167,6 +190,16 @@ export const GRAPHIC_TEMPLATES: TemplateDef[] = [
     fields: [
       { key: 'kicker', label: 'Title', wide: true, placeholder: 'Weather Alerts' },
       { key: 'detail', label: 'Subtitle', wide: true, placeholder: 'In effect now' },
+    ],
+  },
+  {
+    id: 'spcmap',
+    name: 'SPC Outlook',
+    group: 'Full screen',
+    hint: 'Use Plot outlook below to draw the latest Storm Prediction Center risk areas over the coverage area.',
+    fields: [
+      { key: 'kicker', label: 'Title', wide: true, placeholder: 'Severe Weather Outlook' },
+      { key: 'detail', label: 'Subtitle', wide: true, placeholder: 'Storm Prediction Center' },
     ],
   },
   {
@@ -1325,6 +1358,90 @@ function SunsetScene() {
   );
 }
 
+/** A winter sky: flat light, cold haze, and snow in the air. */
+function WinterScene() {
+  const id = useGid();
+  let seed = 19;
+  const next = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+  const flakes = Array.from({ length: 140 }, () => ({
+    x: Math.round(next() * W),
+    y: Math.round(next() * H),
+    r: 1.5 + next() * 3.5,
+    o: 0.25 + next() * 0.5,
+  }));
+
+  return (
+    <>
+      <defs>
+        <linearGradient id={id('winter-sky')} x1="0" y1="0" x2="0.2" y2="1">
+          <stop offset="0%" stopColor="#c9d9e8" />
+          <stop offset="42%" stopColor="#8aa4bd" />
+          <stop offset="100%" stopColor="#2d4159" />
+        </linearGradient>
+        <radialGradient id={id('winter-vignette')} cx="0.5" cy="0.42" r="0.78">
+          <stop offset="58%" stopColor="#0b1a26" stopOpacity="0" />
+          <stop offset="100%" stopColor="#0b1a26" stopOpacity="0.6" />
+        </radialGradient>
+      </defs>
+      <rect width={W} height={H} fill={`url(#${id('winter-sky')})`} />
+      {flakes.map((flake, i) => (
+        <circle key={i} cx={flake.x} cy={flake.y} r={flake.r} fill="#ffffff" fillOpacity={flake.o} />
+      ))}
+      <path d={`M0 ${H} L0 890 L${W} 858 L${W} ${H} Z`} fill="#16202c" fillOpacity="0.9" />
+      <rect width={W} height={H} fill={`url(#${id('winter-vignette')})`} />
+    </>
+  );
+}
+
+/** A storm sky: heavy cloud, a break of light, rain in the distance. */
+function StormScene() {
+  const id = useGid();
+  let seed = 41;
+  const next = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+  const rain = Array.from({ length: 90 }, () => {
+    const x = Math.round(next() * W);
+    const y = Math.round(next() * 760);
+    return `M${x} ${y} L${x - 26} ${y + 96}`;
+  });
+
+  return (
+    <>
+      <defs>
+        <linearGradient id={id('storm-sky')} x1="0" y1="0" x2="0.25" y2="1">
+          <stop offset="0%" stopColor="#2b3b52" />
+          <stop offset="38%" stopColor="#16243a" />
+          <stop offset="100%" stopColor="#060d18" />
+        </linearGradient>
+        <radialGradient id={id('storm-break')} cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0%" stopColor="#cfe0f5" stopOpacity="0.5" />
+          <stop offset="100%" stopColor="#cfe0f5" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <rect width={W} height={H} fill={`url(#${id('storm-sky')})`} />
+      <ellipse cx="1420" cy="330" rx="620" ry="300" fill={`url(#${id('storm-break')})`} />
+      <g stroke="#9fc4e8" strokeOpacity="0.16" strokeWidth="3" strokeLinecap="round">
+        {rain.map((d, i) => (
+          <path key={i} d={d} />
+        ))}
+      </g>
+      <path d={`M0 ${H} L0 896 L${W} 864 L${W} ${H} Z`} fill="#050b14" fillOpacity="0.92" />
+    </>
+  );
+}
+
+/** The backdrop a graphic wears, chosen per event. */
+function Scene({ kind }: { kind?: string }) {
+  if (kind === 'winter') return <WinterScene />;
+  if (kind === 'storm') return <StormScene />;
+  return <SunsetScene />;
+}
+
 /** Ground for the alert map: land and haze, dark enough for colour to sit on. */
 function TerrainScene() {
   const id = useGid();
@@ -1447,7 +1564,7 @@ function WeatherDayGraphic({ f, station, market, stamp }: TemplateProps) {
 
   return (
     <>
-      <SunsetScene />
+      <Scene kind={f.scene} />
       <rect x="80" y="96" width="1030" height="790" fill="#08152e" fillOpacity="0.78" />
 
       <g filter={`url(#${id('shadow')})`}>
@@ -1490,6 +1607,61 @@ function WeatherDayGraphic({ f, station, market, stamp }: TemplateProps) {
   );
 }
 
+/* ------------------------------------------------------------- map plate */
+
+/**
+ * State outlines, without any polygon union.
+ *
+ * Drawing every county of a state as one thick stroke and then painting the
+ * county fills over it leaves only the outer half of that stroke showing -
+ * which is the state border. Cheap, and exactly right.
+ */
+function stateOutlines(shapes: CountyShape[]): string[] {
+  const byState = new Map<string, string>();
+  for (const shape of shapes) {
+    const state = shape.id.slice(0, 2);
+    byState.set(state, (byState.get(state) ?? '') + shape.d);
+  }
+  return [...byState.values()];
+}
+
+/**
+ * Depth over a flat vector map: a light from the north-west and darkened
+ * edges. Without it, coloured counties read as a cartoon rather than terrain.
+ */
+function MapRelief({ frame }: { frame: { x: number; y: number; w: number; h: number } }) {
+  const id = useGid();
+  return (
+    <>
+      <defs>
+        <linearGradient id={id('relief')} x1="0" y1="0" x2="0.3" y2="1">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.13" />
+          <stop offset="46%" stopColor="#ffffff" stopOpacity="0" />
+          <stop offset="100%" stopColor="#000a14" stopOpacity="0.32" />
+        </linearGradient>
+        <radialGradient id={id('map-vignette')} cx="0.5" cy="0.5" r="0.74">
+          <stop offset="60%" stopColor="#000000" stopOpacity="0" />
+          <stop offset="100%" stopColor="#00060f" stopOpacity="0.5" />
+        </radialGradient>
+      </defs>
+      <rect x={frame.x} y={frame.y} width={frame.w} height={frame.h} fill={`url(#${id('relief')})`} />
+      <rect x={frame.x} y={frame.y} width={frame.w} height={frame.h} fill={`url(#${id('map-vignette')})`} />
+    </>
+  );
+}
+
+/** The hairline county grid and the heavier state borders over it. */
+function Boundaries({ shapes, tone = '#08141d' }: { shapes: CountyShape[]; tone?: string }) {
+  return (
+    <>
+      <path d={mergedPath(shapes)} fill="none" stroke={tone} strokeOpacity="0.38" strokeWidth="1.4" strokeLinejoin="round" />
+      {stateOutlines(shapes).map((d, i) => (
+        <path key={i} d={d} fill="none" stroke={tone} strokeOpacity="0.85" strokeWidth="4" strokeLinejoin="round" />
+      ))}
+    </>
+  );
+}
+
 /* --------------------------------------------------------- heat index map */
 
 function HeatIndexGraphic({ f, station, market, stamp, places, lite }: TemplateProps & { places: GraphicPlace[]; lite?: boolean }) {
@@ -1498,7 +1670,7 @@ function HeatIndexGraphic({ f, station, market, stamp, places, lite }: TemplateP
   const shapes = useCountyShapes(!lite && usable.length > 1);
   const key = usable.map((p) => `${p.name}:${p.lat}:${p.lon}`).join('|');
   const fit = useMemo(() => (usable.length > 1 ? fitProjection(usable, BAR_MAP) : null), [key]); // eslint-disable-line react-hooks/exhaustive-deps
-  const counties = useMemo(() => (shapes && fit ? mergedPath(countyShapes(shapes, fit)) : ''), [shapes, fit]);
+  const parts = useMemo(() => (shapes && fit ? countyShapes(shapes, fit) : []), [shapes, fit]);
   const spots = fit ? layoutCallouts(usable, fit.project, '', BAR_MAP, { w: 176, h: 132 }, MAP_SLOTS) : [];
 
   return (
@@ -1511,10 +1683,12 @@ function HeatIndexGraphic({ f, station, market, stamp, places, lite }: TemplateP
       </defs>
 
       <g clipPath={`url(#${id('map')})`}>
-        <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} fill="#7a2a12" />
+        <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} fill="#6d2a16" />
         {fit && <HeatField places={usable} project={fit.project} frame={BAR_MAP} />}
-        {counties && <path d={counties} fill="none" stroke="#0a0a0a" strokeOpacity="0.62" strokeWidth="2.4" strokeLinejoin="round" />}
+        <Boundaries shapes={parts} />
+        <MapRelief frame={BAR_MAP} />
       </g>
+      <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} fill="none" stroke="#03101c" strokeOpacity="0.8" strokeWidth="3" />
 
       {usable.length < 2 && <Empty>Loading the heat index</Empty>}
       {spots.map(({ place, px, py, cx, cy }) => {
@@ -1543,7 +1717,6 @@ function HeatIndexGraphic({ f, station, market, stamp, places, lite }: TemplateP
     </>
   );
 }
-
 /* ------------------------------------------------------------- comparison */
 
 /** Forecast highs against what the air will feel like: the pair is the story. */
@@ -1559,7 +1732,7 @@ function CompareGraphic({ f, station, market, stamp, days }: TemplateProps & { d
 
   return (
     <>
-      <SunsetScene />
+      <Scene kind={f.scene} />
       <rect x={panel.x} y={panel.y} width={panel.w} height={panel.h} fill="#20100a" fillOpacity="0.74" />
       <line x1={panel.x + 40} x2={panel.x + panel.w - 40} y1={panel.y + 92} y2={panel.y + 92} stroke="#ffffff" strokeOpacity="0.35" strokeWidth="2" />
       <line x1={panel.x + 40} x2={panel.x + panel.w - 40} y1={base} y2={base} stroke="#ffffff" strokeOpacity="0.35" strokeWidth="2" />
@@ -1614,7 +1787,7 @@ function AlertMapGraphic({
   const shapes = useCountyShapes(!lite && places.length > 1);
   const key = places.map((p) => `${p.name}:${p.lat}:${p.lon}`).join('|');
   const fit = useMemo(() => (places.length > 1 ? fitProjection(places, BAR_MAP) : null), [key]); // eslint-disable-line react-hooks/exhaustive-deps
-  const counties = useMemo(() => (shapes && fit ? countyShapes(shapes, fit) : []), [shapes, fit]);
+  const parts = useMemo(() => (shapes && fit ? countyShapes(shapes, fit) : []), [shapes, fit]);
   const labels = fit ? layoutCallouts(places, fit.project, '', BAR_MAP, { w: 236, h: 84 }, MAP_SLOTS) : [];
 
   const byCounty = new Map(areas.map((area) => [area.id, area]));
@@ -1630,26 +1803,37 @@ function AlertMapGraphic({
         <clipPath id={id('map')}>
           <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} />
         </clipPath>
+        <linearGradient id={id('land')} x1="0" y1="0" x2="0.2" y2="1">
+          <stop offset="0%" stopColor="#2f4436" />
+          <stop offset="100%" stopColor="#1d2f28" />
+        </linearGradient>
       </defs>
 
       <g clipPath={`url(#${id('map')})`}>
-        <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} fill="#1d3b2a" />
-        {counties.map((shape) => {
+        <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} fill={`url(#${id('land')})`} />
+        {/* States first and thick: the county fills painted over them leave
+            just the outer edge, which is the border. */}
+        {stateOutlines(parts).map((d, i) => (
+          <path key={i} d={d} fill="none" stroke="#050f16" strokeOpacity="0.9" strokeWidth="9" strokeLinejoin="round" />
+        ))}
+        {parts.map((shape) => {
           const area = byCounty.get(shape.id);
           return (
             <path
               key={shape.id}
               d={shape.d}
-              fill={area ? area.color : '#2f5140'}
-              fillOpacity={area ? 0.92 : 0.85}
-              stroke="#0a0a0a"
-              strokeOpacity="0.7"
-              strokeWidth="2.4"
+              fill={area ? area.color : '#35503f'}
+              fillOpacity={area ? 0.88 : 0.9}
+              stroke="#08141d"
+              strokeOpacity="0.4"
+              strokeWidth="1.4"
               strokeLinejoin="round"
             />
           );
         })}
+        <MapRelief frame={BAR_MAP} />
       </g>
+      <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} fill="none" stroke="#03101c" strokeOpacity="0.8" strokeWidth="3" />
 
       {places.length < 2 && <Empty>Loading the coverage area</Empty>}
       {labels.map(({ place, px, py, cx, cy }) => {
@@ -1670,7 +1854,7 @@ function AlertMapGraphic({
         const width = label.length * 20 + 48;
         return (
           <g key={area.label} transform={`translate(${BAR_MAP.x + 36} ${BAR_MAP.y + 36 + i * 84})`}>
-            <rect width={width} height="64" fill={area.color} stroke="#0a0a0a" strokeWidth="3" />
+            <rect width={width} height="64" fill={area.color} stroke="#050f16" strokeWidth="3" />
             <text x="24" y="43" fontFamily={FONT} fontSize="30" fontWeight="800" letterSpacing="1" fill="#0a0a0a">
               {label}
             </text>
@@ -1684,6 +1868,124 @@ function AlertMapGraphic({
       )}
 
       <StationBar title={f.kicker || 'Weather Alerts'} subtitle={f.detail || 'In effect now'} stamp={stamp} />
+      <Band station={station} market={market} />
+    </>
+  );
+}
+
+/* ---------------------------------------------------------- spc outlook */
+
+/** SPC risk levels, least to most significant, for the legend. */
+const SPC_LEVELS: Array<{ level: number; label: string; color: string }> = [
+  { level: 0, label: 'Thunderstorms', color: '#C1E9C1' },
+  { level: 1, label: 'Marginal', color: '#66A366' },
+  { level: 2, label: 'Slight', color: '#FFE066' },
+  { level: 3, label: 'Enhanced', color: '#FFA366' },
+  { level: 4, label: 'Moderate', color: '#E06666' },
+  { level: 5, label: 'High', color: '#FF66FF' },
+];
+
+/**
+ * The Storm Prediction Center's outlook over the coverage area.
+ *
+ * The polygons are continental; the map frame clips them. Only the levels
+ * that actually reach this area appear in the legend - a national key listing
+ * risks nobody here is under tells a viewer nothing.
+ */
+function SpcGraphic({
+  f,
+  station,
+  market,
+  stamp,
+  places,
+  outlook,
+  lite,
+}: TemplateProps & { places: GraphicPlace[]; outlook: GraphicOutlookShape[]; lite?: boolean }) {
+  const id = useGid();
+  const shapes = useCountyShapes(!lite && places.length > 1);
+  const key = places.map((p) => `${p.name}:${p.lat}:${p.lon}`).join('|');
+  const fit = useMemo(() => (places.length > 1 ? fitProjection(places, BAR_MAP) : null), [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const parts = useMemo(() => (shapes && fit ? countyShapes(shapes, fit) : []), [shapes, fit]);
+  const labels = fit ? layoutCallouts(places, fit.project, '', BAR_MAP, { w: 236, h: 84 }, MAP_SLOTS) : [];
+
+  const drawn = useMemo(() => {
+    if (!fit) return [];
+    return [...outlook]
+      .sort((a, b) => a.level - b.level)
+      .map((shape) => ({
+        ...shape,
+        d: shape.rings
+          .map((ring) => ring.map((pt, i) => {
+            const [x, y] = fit.project(pt[0], pt[1]);
+            return `${i ? 'L' : 'M'}${x.toFixed(0)} ${y.toFixed(0)}`;
+          }).join('') + 'Z')
+          .join(''),
+      }));
+  }, [outlook, fit]);
+
+  const present = SPC_LEVELS.filter((lvl) => drawn.some((shape) => shape.level === lvl.level)).reverse();
+
+  return (
+    <>
+      <TerrainScene />
+      <defs>
+        <clipPath id={id('map')}>
+          <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} />
+        </clipPath>
+        <linearGradient id={id('land')} x1="0" y1="0" x2="0.2" y2="1">
+          <stop offset="0%" stopColor="#2b3b4c" />
+          <stop offset="100%" stopColor="#16222e" />
+        </linearGradient>
+      </defs>
+
+      <g clipPath={`url(#${id('map')})`}>
+        <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} fill={`url(#${id('land')})`} />
+        {drawn.map((shape, i) => (
+          <path key={i} d={shape.d} fill={shape.color} fillOpacity="0.62" stroke={shape.color} strokeOpacity="0.95" strokeWidth="3" strokeLinejoin="round" />
+        ))}
+        <Boundaries shapes={parts} />
+        <MapRelief frame={BAR_MAP} />
+      </g>
+      <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} fill="none" stroke="#03101c" strokeOpacity="0.8" strokeWidth="3" />
+
+      {places.length < 2 && <Empty>Loading the coverage area</Empty>}
+      {places.length > 1 && drawn.length === 0 && (
+        <text x={BAR_MAP.x + 36} y={BAR_MAP.y + 80} fontFamily={FONT} fontSize="40" fontWeight="700" {...OUTLINE} strokeWidth="9">
+          Press Plot outlook to draw the latest risk areas
+        </text>
+      )}
+
+      {labels.map(({ place, px, py, cx, cy }) => {
+        const moved = Math.hypot(cx - px, cy - py) > 40;
+        return (
+          <g key={place.name}>
+            {moved && <line x1={px} y1={py} x2={cx} y2={cy - 18} stroke="#0a0a0a" strokeOpacity="0.6" strokeWidth="4" />}
+            <circle cx={px} cy={py} r="8" fill="#ffffff" stroke="#0a0a0a" strokeWidth="4" />
+            <text x={cx} y={cy + 12} textAnchor="middle" fontFamily={FONT} fontSize="38" fontWeight="700" {...OUTLINE} strokeWidth="9">
+              {place.name}
+            </text>
+          </g>
+        );
+      })}
+
+      {present.map((lvl, i) => {
+        const label = lvl.label.toUpperCase();
+        return (
+          <g key={lvl.level} transform={`translate(${BAR_MAP.x + 36} ${BAR_MAP.y + 36 + i * 74})`}>
+            <rect width={label.length * 20 + 96} height="56" fill="#061019" fillOpacity="0.88" stroke="#050f16" strokeWidth="2" />
+            <rect x="10" y="10" width="36" height="36" fill={lvl.color} stroke="#050f16" strokeWidth="2" />
+            <text x="60" y="39" fontFamily={FONT} fontSize="28" fontWeight="800" letterSpacing="1" fill="#ffffff">
+              {label}
+            </text>
+          </g>
+        );
+      })}
+
+      <StationBar
+        title={f.kicker || 'Severe Weather Outlook'}
+        subtitle={f.detail || 'Storm Prediction Center'}
+        stamp={stamp}
+      />
       <Band station={station} market={market} />
     </>
   );
@@ -1735,6 +2037,9 @@ export function GraphicSvg({ data, svgRef, className, label, lite, decorative }:
       break;
     case 'alertmap':
       body = <AlertMapGraphic {...props} places={data.places ?? []} areas={data.areas ?? []} lite={lite} />;
+      break;
+    case 'spcmap':
+      body = <SpcGraphic {...props} places={data.places ?? []} outlook={data.outlook ?? []} lite={lite} />;
       break;
     case 'headlines':
       body = <HeadlinesGraphic {...props} />;
