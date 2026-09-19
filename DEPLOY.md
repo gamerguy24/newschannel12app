@@ -25,25 +25,27 @@ the Worker serves `frontend/dist` and a stale build would ship a stale site.
 
 The Worker lands at `https://newschannel12app.<your-account>.workers.dev`.
 
-## Deploying from GitHub instead
+## Deploying from GitHub
 
-Use **Workers Builds**, not a Pages project. In the Cloudflare dashboard:
-Workers & Pages → your Worker → Settings → Builds → connect the repository.
+Every push to `main` deploys, through the workflow in
+`.github/workflows/deploy.yml`. It installs, typechecks, deploys, and then
+checks the live site answers before it calls the run green.
 
-| Setting | Value |
+It needs two repository secrets - GitHub → Settings → Secrets and variables →
+Actions → New repository secret:
+
+| Secret | Where it comes from |
 |---|---|
-| Build command | leave empty |
-| Deploy command | `npx wrangler deploy` |
-| Root directory | `/` |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare → My Profile → API Tokens → Create Token → Custom → **Edit Cloudflare Workers**, scoped to this account |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare dashboard → Workers & Pages (the account id in the URL) |
 
-The build command can be empty because `wrangler.jsonc` carries a build hook:
-`wrangler deploy` runs `npm run build` itself before uploading. The Worker
-serves `frontend/dist`, and a deploy that skipped the site build would fail
-outright - so the build belongs with the deploy, not in a CI field somebody
-has to remember to fill in.
+Do not also connect the Worker to this repository through Cloudflare's own
+Workers Builds: two systems deploying the same Worker race each other, and it
+is then unclear which one shipped what. Pick one, and this is the one whose
+logs you can read.
 
-A Pages project cannot run this app: Pages serves static files, and every
-`/api` call would 404.
+A Pages project cannot run this app at all: Pages serves static files, and
+every `/api` call would 404.
 
 ## Day-to-day
 
