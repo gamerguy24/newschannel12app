@@ -23,7 +23,7 @@ npm run deploy                         # builds the site, then deploys
 `npm run deploy` runs the frontend build and `wrangler deploy` together, because
 the Worker serves `frontend/dist` and a stale build would ship a stale site.
 
-The Worker lands at `https://storm12-weather.<your-account>.workers.dev`.
+The Worker lands at `https://newschannel12app.<your-account>.workers.dev`.
 
 ## Deploying from GitHub instead
 

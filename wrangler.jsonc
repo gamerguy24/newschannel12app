@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "storm12-weather",
+  "name": "newschannel12app",
   "main": "worker/index.js",
   "compatibility_date": "2026-09-18",
   // The NEXRAD decoder needs node:zlib and Buffer; the rest of the app is
