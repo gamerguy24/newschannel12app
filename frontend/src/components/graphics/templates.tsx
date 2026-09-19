@@ -728,7 +728,7 @@ function useCountyShapes(enabled: boolean) {
 }
 
 /** Fit the towns into the map frame: equirectangular, corrected for latitude. */
-function fitProjection(places: GraphicPlace[]) {
+function fitProjection(places: GraphicPlace[], frame: { x: number; y: number; w: number; h: number } = MAP) {
   const lats = places.map((p) => p.lat);
   const lons = places.map((p) => p.lon);
   const cLat = (Math.max(...lats) + Math.min(...lats)) / 2;
@@ -737,13 +737,13 @@ function fitProjection(places: GraphicPlace[]) {
   // Padding leaves room for the callout cards around the outermost towns.
   const spanLon = (Math.max(...lons) - Math.min(...lons) + 1.2) * kx;
   const spanLat = Math.max(...lats) - Math.min(...lats) + 0.8;
-  const k = Math.min(MAP.w / spanLon, MAP.h / spanLat);
-  const halfLon = MAP.w / 2 / (k * kx);
-  const halfLat = MAP.h / 2 / k;
+  const k = Math.min(frame.w / spanLon, frame.h / spanLat);
+  const halfLon = frame.w / 2 / (k * kx);
+  const halfLat = frame.h / 2 / k;
   return {
     project: (lon: number, lat: number): [number, number] => [
-      MAP.x + MAP.w / 2 + (lon - cLon) * kx * k,
-      MAP.y + MAP.h / 2 - (lat - cLat) * k,
+      frame.x + frame.w / 2 + (lon - cLon) * kx * k,
+      frame.y + frame.h / 2 - (lat - cLat) * k,
     ],
     bounds: { west: cLon - halfLon, east: cLon + halfLon, south: cLat - halfLat, north: cLat + halfLat },
   };
@@ -834,6 +834,23 @@ const OFFSETS: Array<[number, number]> = [
   [210, 150],
 ];
 
+/**
+ * Where map lettering may sit, nearest first. Every slot is inside about a
+ * county's width of the town: far enough to dodge a neighbour, never far
+ * enough to read as somewhere else's number.
+ */
+const MAP_SLOTS: Array<[number, number]> = [
+  [0, 0],
+  [0, -116],
+  [0, 116],
+  [-132, 0],
+  [132, 0],
+  [-124, -104],
+  [124, -104],
+  [-124, 104],
+  [124, 104],
+];
+
 interface Box {
   x0: number;
   y0: number;
@@ -867,30 +884,33 @@ function layoutCallouts(
   places: GraphicPlace[],
   project: (lon: number, lat: number) => [number, number],
   tag: string,
+  area: { x: number; y: number; w: number; h: number } = MAP,
+  box: { w: number; h: number } = { w: CARD_W, h: CARD_H },
+  slots: Array<[number, number]> = OFFSETS,
 ): Callout[] {
   const points = places.map((place) => ({ place, xy: project(place.lon, place.lat) }));
   const dots: Box[] = points.map(({ xy }) => ({ x0: xy[0] - 12, y0: xy[1] - 12, x1: xy[0] + 12, y1: xy[1] + 12 }));
-  const placed: Box[] = [{ x0: MAP.x + 30, y0: MAP.y + 30, x1: MAP.x + 30 + tag.length * 19 + 56, y1: MAP.y + 82 }];
-  const frame: Box = { x0: MAP.x + 8, y0: MAP.y + 8, x1: MAP.x + MAP.w - 8, y1: MAP.y + MAP.h - 8 };
+  const placed: Box[] = [{ x0: area.x + 30, y0: area.y + 30, x1: area.x + 30 + tag.length * 19 + 56, y1: area.y + 82 }];
+  const bounds: Box = { x0: area.x + 8, y0: area.y + 8, x1: area.x + area.w - 8, y1: area.y + area.h - 8 };
   const cardBox = (cx: number, cy: number): Box => ({
-    x0: cx - CARD_W / 2 - 6,
-    y0: cy - CARD_H / 2 - 6,
-    x1: cx + CARD_W / 2 + 6,
-    y1: cy + CARD_H / 2 + 6,
+    x0: cx - box.w / 2 - 6,
+    y0: cy - box.h / 2 - 6,
+    x1: cx + box.w / 2 + 6,
+    y1: cy + box.h / 2 + 6,
   });
 
   return points.map(({ place, xy }, index) => {
     const [px, py] = xy;
     const others = dots.filter((_, j) => j !== index);
-    let offset = OFFSETS[0];
+    let offset = slots[0];
     let best = Number.POSITIVE_INFINITY;
-    for (const candidate of OFFSETS) {
+    for (const candidate of slots) {
       const box = cardBox(px + candidate[0], py + candidate[1]);
       const size = (box.x1 - box.x0) * (box.y1 - box.y0);
       const score =
         placed.reduce((sum, b) => sum + shared(box, b), 0) +
         others.reduce((sum, b) => sum + shared(box, b), 0) +
-        (size - shared(box, frame)) * 2;
+        (size - shared(box, bounds)) * 2;
       if (score < best) {
         best = score;
         offset = candidate;
@@ -1201,49 +1221,41 @@ function BugGraphic({ f, icon }: TemplateProps & { icon: string }) {
   );
 }
 
-/* ------------------------------------------------------------ title bar */
+/* ----------------------------------------------------------- station bar */
 
 /**
- * The bar the map and chart graphics wear: station mark and title on white,
- * over a coloured strip carrying the qualifier - the hour a map is valid for,
- * or the days an alert covers.
+ * The bar every map and chart wears: a full-width white plate, the station
+ * block at the left, the title set large in black, and a red strip beneath
+ * carrying the qualifier. The proportions are what make it read on air - the
+ * title is the loudest thing in the top third of frame, not a polite caption.
  */
-function TitleBar({
-  title,
-  subtitle,
-  stamp,
-  color = ACCENT,
-}: {
-  title: string;
-  subtitle?: string;
-  stamp?: string;
-  color?: string;
-}) {
+function StationBar({ title, subtitle, stamp }: { title: string; subtitle?: string; stamp?: string }) {
   const id = useGid();
+  const label = (subtitle ?? '').toUpperCase();
   return (
     <g filter={`url(#${id('shadow')})`}>
-      <rect x={SAFE_X} y="48" width={W - SAFE_X * 2} height="96" fill="#ffffff" />
-      <rect x={SAFE_X} y="48" width="300" height="96" fill="#0b2552" />
-      <Tile x={SAFE_X + 18} y={62} w={94} h={68} fontSize={50} />
-      <text x={SAFE_X + 128} y="94" fontFamily={FONT} fontSize="28" fontWeight="800" fill="#ffffff">
+      <rect x="110" y="56" width="1700" height="104" fill="#ffffff" />
+      <rect x="110" y="56" width="340" height="104" fill="#0b2552" />
+      <Tile x={132} y={70} w={104} h={76} fontSize={56} />
+      <text x="256" y="106" fontFamily={FONT} fontSize="30" fontWeight="800" fill="#ffffff">
         STORM 12
       </text>
-      <text x={SAFE_X + 128} y="124" fontFamily={FONT} fontSize="20" fontWeight="600" letterSpacing="4" fill="#9fb8da">
+      <text x="256" y="136" fontFamily={FONT} fontSize="20" fontWeight="600" letterSpacing="5" fill="#9fb8da">
         WEATHER
       </text>
-      <text x={SAFE_X + 330} y="114" fontFamily={FONT} fontSize="54" fontWeight="800" fill="#0b1f3f">
-        {title.toUpperCase()}
+      <text x="486" y="132" fontFamily={FONT} fontSize="66" fontWeight="800" letterSpacing="-1" fill="#0b1420">
+        {title.toUpperCase().slice(0, 26)}
       </text>
       {stamp && (
-        <text x={W - SAFE_X - 28} y="112" textAnchor="end" fontFamily={FONT} fontSize="30" fontWeight="600" fill="#5f7ea8">
+        <text x="1786" y="126" textAnchor="end" fontFamily={FONT} fontSize="28" fontWeight="600" fill="#6b7f96">
           {stamp}
         </text>
       )}
-      {subtitle && (
+      {label && (
         <>
-          <rect x={SAFE_X} y="144" width={Math.min(subtitle.length * 21 + 60, 900)} height="52" fill={color} />
-          <text x={SAFE_X + 28} y="181" fontFamily={FONT} fontSize="28" fontWeight="800" letterSpacing="2" fill="#ffffff">
-            {subtitle.toUpperCase()}
+          <rect x="110" y="160" width={label.length * 26 + 84} height="56" fill={ALERT_RED} />
+          <text x="142" y="201" fontFamily={FONT} fontSize="34" fontWeight="800" letterSpacing="1" fill="#ffffff">
+            {label}
           </text>
         </>
       )}
@@ -1251,65 +1263,226 @@ function TitleBar({
   );
 }
 
-/** Map lettering: white, knocked out with a dark rim so it reads over any fill. */
+/** The map frame that sits under a station bar. */
+const BAR_MAP = { x: 110, y: 240, w: 1700, h: 716 };
+
+/** Map lettering: white, rimmed hard in black so it survives any fill under it. */
 const OUTLINE = {
   fill: '#ffffff',
-  stroke: '#04101f',
-  strokeWidth: 8,
+  stroke: '#06121f',
+  strokeWidth: 10,
   strokeLinejoin: 'round' as const,
   paintOrder: 'stroke' as const,
 };
 
+/* ---------------------------------------------------------------- scenes */
+
+/**
+ * A sky, rather than a flat wash. Heat graphics live on a low sun: a warm
+ * gradient, a glow, haze bands and a treeline - all drawn, so there is no
+ * photograph to license and it stays sharp at any size.
+ */
+function SunsetScene() {
+  const id = useGid();
+  // Deterministic ridge: the same silhouette on every render and every export.
+  let seed = 7;
+  const next = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+  let ridge = `M0 ${H} L0 884`;
+  for (let x = 0; x <= W; x += 40) ridge += ` L${x} ${856 + Math.round(next() * 44)}`;
+  ridge += ` L${W} ${H} Z`;
+
+  return (
+    <>
+      <defs>
+        <linearGradient id={id('sunset-sky')} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f9c67a" />
+          <stop offset="28%" stopColor="#ef8f33" />
+          <stop offset="58%" stopColor="#c9451c" />
+          <stop offset="100%" stopColor="#5d1710" />
+        </linearGradient>
+        <radialGradient id={id('sunset-sun')} cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0%" stopColor="#fff6d8" stopOpacity="0.95" />
+          <stop offset="45%" stopColor="#ffd98a" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#ffb057" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id={id('sunset-vignette')} cx="0.5" cy="0.45" r="0.78">
+          <stop offset="58%" stopColor="#1a0600" stopOpacity="0" />
+          <stop offset="100%" stopColor="#1a0600" stopOpacity="0.6" />
+        </radialGradient>
+      </defs>
+      <rect width={W} height={H} fill={`url(#${id('sunset-sky')})`} />
+      <circle cx="1470" cy="300" r="560" fill={`url(#${id('sunset-sun')})`} />
+      <circle cx="1470" cy="300" r="84" fill="#fffdf2" fillOpacity="0.92" />
+      {[648, 706, 764, 820].map((y, i) => (
+        <rect key={y} y={y} width={W} height={14 - i * 2} fill="#ffe0b0" fillOpacity={0.12 - i * 0.02} />
+      ))}
+      <path d={ridge} fill="#2b0a06" fillOpacity="0.92" />
+      <rect width={W} height={H} fill={`url(#${id('sunset-vignette')})`} />
+    </>
+  );
+}
+
+/** Ground for the alert map: land and haze, dark enough for colour to sit on. */
+function TerrainScene() {
+  const id = useGid();
+  return (
+    <>
+      <defs>
+        <linearGradient id={id('land')} x1="0" y1="0" x2="0.4" y2="1">
+          <stop offset="0%" stopColor="#12324a" />
+          <stop offset="55%" stopColor="#0a2033" />
+          <stop offset="100%" stopColor="#04101c" />
+        </linearGradient>
+      </defs>
+      <rect width={W} height={H} fill={`url(#${id('land')})`} />
+    </>
+  );
+}
+
+/* ------------------------------------------------------------ heat field */
+
+/** Continuous temperature ramp, so a six-degree spread still shows as colour. */
+const RAMP: Array<[number, [number, number, number]]> = [
+  [10, [58, 92, 190]],
+  [32, [74, 143, 224]],
+  [48, [63, 176, 232]],
+  [60, [56, 192, 122]],
+  [72, [214, 198, 66]],
+  [84, [239, 138, 46]],
+  [95, [224, 67, 31]],
+  [108, [150, 20, 42]],
+];
+
+function rampColor(value: number | null): string {
+  if (value === null) return '#3a4656';
+  const stops = RAMP;
+  if (value <= stops[0][0]) return `rgb(${stops[0][1].join(',')})`;
+  for (let i = 1; i < stops.length; i += 1) {
+    if (value <= stops[i][0]) {
+      const [v0, c0] = stops[i - 1];
+      const [v1, c1] = stops[i];
+      const t = (value - v0) / (v1 - v0);
+      const mix = c0.map((c, k) => Math.round(c + (c1[k] - c) * t));
+      return `rgb(${mix.join(',')})`;
+    }
+  }
+  return `rgb(${stops[stops.length - 1][1].join(',')})`;
+}
+
+/**
+ * The heat field. Readings are inverse-distance weighted onto a coarse grid
+ * and then blurred, which is how a station's heat raster reads - a smooth
+ * field of colour, not one flat tint per county.
+ */
+function HeatField({
+  places,
+  project,
+  frame,
+}: {
+  places: GraphicPlace[];
+  project: (lon: number, lat: number) => [number, number];
+  frame: { x: number; y: number; w: number; h: number };
+}) {
+  const id = useGid();
+  const cols = 56;
+  const rows = 26;
+  const cw = frame.w / cols;
+  const ch = frame.h / rows;
+
+  const points = places
+    .map((place) => ({ value: place.feels ?? place.temp, xy: project(place.lon, place.lat) }))
+    .filter((point): point is { value: number; xy: [number, number] } => point.value !== null);
+  if (points.length < 2) return null;
+
+  const cells = [];
+  for (let r = 0; r < rows; r += 1) {
+    for (let c = 0; c < cols; c += 1) {
+      const x = frame.x + c * cw + cw / 2;
+      const y = frame.y + r * ch + ch / 2;
+      let weighted = 0;
+      let total = 0;
+      for (const point of points) {
+        const d2 = Math.max((point.xy[0] - x) ** 2 + (point.xy[1] - y) ** 2, 400);
+        // Inverse fourth power: each town keeps its own neighbourhood rather
+        // than everything averaging to one flat middle value.
+        const weight = 1 / (d2 * d2);
+        weighted += point.value * weight;
+        total += weight;
+      }
+      cells.push({ x: frame.x + c * cw, y: frame.y + r * ch, fill: rampColor(weighted / total) });
+    }
+  }
+
+  return (
+    <>
+      <defs>
+        <filter id={id('soften')} x="-6%" y="-6%" width="112%" height="112%">
+          <feGaussianBlur stdDeviation="24" />
+        </filter>
+      </defs>
+      <g filter={`url(#${id('soften')})`}>
+        {cells.map((cell, i) => (
+          <rect key={i} x={cell.x - 2} y={cell.y - 2} width={cw + 4} height={ch + 4} fill={cell.fill} />
+        ))}
+      </g>
+    </>
+  );
+}
+
+
 /* ------------------------------------------------------- weather alert day */
 
 /**
- * The day-ahead heads-up: what is coming, and when. Deliberately plain - a
- * viewer should read the two lines in the time it takes to look up.
+ * The day-ahead heads-up. Two lines, both in caps, over a low sun: a viewer
+ * should take it in at a glance from across a room.
  */
 function WeatherDayGraphic({ f, station, market, stamp }: TemplateProps) {
   const id = useGid();
-  const what = wrap(f.what || 'Describe the hazard here', 34, 2);
+  const banner = (f.kicker || 'Weather Alert Day').toUpperCase().slice(0, 22);
+  const when = (f.when || 'Today through Saturday').toUpperCase();
+  const what = wrap((f.what || 'Extreme heat and high humidity').toUpperCase(), 24, 2);
+
   return (
     <>
-      <Ground />
-      <rect x="60" y="110" width="980" height="740" rx="28" fill="#041026" fillOpacity="0.62" />
+      <SunsetScene />
+      <rect x="80" y="96" width="1030" height="790" fill="#08152e" fillOpacity="0.78" />
 
       <g filter={`url(#${id('shadow')})`}>
-        <rect x="110" y="150" width="880" height="180" fill="#ffffff" />
-        <text x="146" y="206" fontFamily={FONT} fontSize="26" fontWeight="700" letterSpacing="4" fill="#0b1f3f">
-          {station.toUpperCase()}
+        <rect x="120" y="140" width="880" height="200" fill="#ffffff" />
+        <text x="154" y="208" fontFamily={FONT} fontSize="30" fontWeight="800" letterSpacing="3" fill="#0b1420">
+          {station.toUpperCase().slice(0, 22)}
         </text>
         <text
-          x="146"
-          y="288"
+          x="154"
+          y="300"
           fontFamily={FONT}
-          fontSize={(f.kicker || 'Weather Alert Day').length > 18 ? 48 : 58}
+          fontSize={banner.length > 14 ? 58 : 70}
           fontWeight="800"
           letterSpacing="-1"
           fill={ALERT_RED}
         >
-          {(f.kicker || 'Weather Alert Day').toUpperCase().slice(0, 24)}
+          {banner}
         </text>
-        <Tile x={846} y={166} w={120} h={148} fontSize={88} />
+        {/* The tile breaks the top edge, the way a station numeral does. */}
+        <Tile x={858} y={112} w={152} h={184} fontSize={118} />
       </g>
 
-      <text x="150" y="450" fontFamily={FONT} fontSize="44" fontWeight="800" letterSpacing="2" fill="#7fc4ff">
-        WHEN
+      <text x="154" y="486" fontFamily={FONT} fontSize="54" fontWeight="800" letterSpacing="1" fill="#ffffff">
+        WHEN: {when.slice(0, 26)}
       </text>
-      <text x="150" y="524" fontFamily={FONT} fontSize="52" fontWeight="700" fill="#ffffff">
-        {(f.when || 'Today through Saturday').slice(0, 30)}
+      <text x="154" y="640" fontFamily={FONT} fontSize="54" fontWeight="800" letterSpacing="1" fill="#ffffff">
+        WHAT: {what[0]}
       </text>
-
-      <text x="150" y="640" fontFamily={FONT} fontSize="44" fontWeight="800" letterSpacing="2" fill="#7fc4ff">
-        WHAT
-      </text>
-      {what.map((line, i) => (
-        <text key={i} x="150" y={714 + i * 66} fontFamily={FONT} fontSize="52" fontWeight="700" fill={f.what ? '#ffffff' : '#5f7ea8'}>
-          {line}
+      {what[1] && (
+        <text x="154" y="712" fontFamily={FONT} fontSize="54" fontWeight="800" letterSpacing="1" fill="#ffffff">
+          {what[1]}
         </text>
-      ))}
+      )}
 
-      <text x={W - SAFE_X} y="118" textAnchor="end" fontFamily={FONT} fontSize="32" fontWeight="600" fill="#b9cde8">
+      <text x={W - 130} y="130" textAnchor="end" fontFamily={FONT} fontSize="30" fontWeight="600" fill="#ffe7c8">
         {stamp}
       </text>
       <Band station={station} market={market} />
@@ -1319,73 +1492,53 @@ function WeatherDayGraphic({ f, station, market, stamp }: TemplateProps) {
 
 /* --------------------------------------------------------- heat index map */
 
-/** Nearest town wins the shading: a coarse field, but an honest one. */
-function shadeByNearest(shapes: CountyShape[], places: GraphicPlace[], project: (lon: number, lat: number) => [number, number]) {
-  const points = places.map((place) => ({ place, xy: project(place.lon, place.lat) }));
-  return shapes.map((shape) => {
-    let nearest = points[0];
-    let best = Number.POSITIVE_INFINITY;
-    for (const point of points) {
-      const dx = point.xy[0] - shape.cx;
-      const dy = point.xy[1] - shape.cy;
-      const distance = dx * dx + dy * dy;
-      if (distance < best) {
-        best = distance;
-        nearest = point;
-      }
-    }
-    const value = nearest?.place.feels ?? nearest?.place.temp ?? null;
-    return { ...shape, fill: tempFill(value) };
-  });
-}
-
 function HeatIndexGraphic({ f, station, market, stamp, places, lite }: TemplateProps & { places: GraphicPlace[]; lite?: boolean }) {
   const id = useGid();
   const usable = places.filter((place) => place.feels !== null || place.temp !== null);
   const shapes = useCountyShapes(!lite && usable.length > 1);
   const key = usable.map((p) => `${p.name}:${p.lat}:${p.lon}`).join('|');
-  const fit = useMemo(() => (usable.length > 1 ? fitProjection(usable) : null), [key]); // eslint-disable-line react-hooks/exhaustive-deps
-  const shaded = useMemo(
-    () => (shapes && fit ? shadeByNearest(countyShapes(shapes, fit), usable, fit.project) : []),
-    [shapes, fit], // eslint-disable-line react-hooks/exhaustive-deps
-  );
-  const callouts = fit ? layoutCallouts(usable, fit.project, '') : [];
+  const fit = useMemo(() => (usable.length > 1 ? fitProjection(usable, BAR_MAP) : null), [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const counties = useMemo(() => (shapes && fit ? mergedPath(countyShapes(shapes, fit)) : ''), [shapes, fit]);
+  const spots = fit ? layoutCallouts(usable, fit.project, '', BAR_MAP, { w: 176, h: 132 }, MAP_SLOTS) : [];
 
   return (
     <>
-      <Ground />
-      <TitleBar title={f.kicker || "Today's Heat Index"} subtitle={f.detail || stamp} color={ALERT_RED} />
-
+      <SunsetScene />
       <defs>
         <clipPath id={id('map')}>
-          <rect x={MAP.x} y={MAP.y} width={MAP.w} height={MAP.h} rx="24" />
+          <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} />
         </clipPath>
       </defs>
+
       <g clipPath={`url(#${id('map')})`}>
-        <rect x={MAP.x} y={MAP.y} width={MAP.w} height={MAP.h} fill="#0a1f3f" />
-        {shaded.map((shape) => (
-          <path key={shape.id} d={shape.d} fill={shape.fill} fillOpacity="0.82" stroke="#04101f" strokeOpacity="0.55" strokeWidth="2" />
-        ))}
+        <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} fill="#7a2a12" />
+        {fit && <HeatField places={usable} project={fit.project} frame={BAR_MAP} />}
+        {counties && <path d={counties} fill="none" stroke="#0a0a0a" strokeOpacity="0.62" strokeWidth="2.4" strokeLinejoin="round" />}
       </g>
-      <rect x={MAP.x} y={MAP.y} width={MAP.w} height={MAP.h} rx="24" fill="none" stroke={PANEL_LINE} strokeOpacity="0.55" strokeWidth="2" />
 
       {usable.length < 2 && <Empty>Loading the heat index</Empty>}
-      {callouts.map(({ place, px, py, cx, cy }) => {
-        const displaced = Math.hypot(cx - px, cy - py) > 120;
+      {spots.map(({ place, px, py, cx, cy }) => {
         const reading = place.feels ?? place.temp;
+        const moved = Math.hypot(cx - px, cy - py) > 40;
         return (
           <g key={place.name}>
-            {displaced && <line x1={px} y1={py} x2={cx} y2={cy + 20} stroke="#ffffff" strokeOpacity="0.6" strokeWidth="3" />}
-            <text x={cx} y={cy + 8} textAnchor="middle" fontFamily={FONT} fontSize="78" fontWeight="800" letterSpacing="-3" {...OUTLINE}>
+            {moved && (
+              <>
+                <line x1={px} y1={py} x2={cx} y2={cy - 24} stroke="#2a1108" strokeOpacity="0.55" strokeWidth="4" />
+                <circle cx={px} cy={py} r="7" fill="#ffffff" stroke="#2a1108" strokeWidth="3" />
+              </>
+            )}
+            <text x={cx} y={cy} textAnchor="middle" fontFamily={FONT} fontSize="80" fontWeight="800" letterSpacing="-4" {...OUTLINE}>
               {reading === null ? '--' : Math.round(reading)}
             </text>
-            <text x={cx} y={cy + 52} textAnchor="middle" fontFamily={FONT} fontSize="32" fontWeight="700" {...OUTLINE} strokeWidth="6">
+            <text x={cx} y={cy + 42} textAnchor="middle" fontFamily={FONT} fontSize="36" fontWeight="700" {...OUTLINE} strokeWidth="8">
               {place.name}
             </text>
           </g>
         );
       })}
 
+      <StationBar title={f.kicker || "Today's Heat Index"} subtitle={f.detail || stamp.replace('As of ', '')} />
       <Band station={station} market={market} />
     </>
   );
@@ -1393,57 +1546,54 @@ function HeatIndexGraphic({ f, station, market, stamp, places, lite }: TemplateP
 
 /* ------------------------------------------------------------- comparison */
 
-/** Forecast highs against what it will feel like: the pair is the story. */
+/** Forecast highs against what the air will feel like: the pair is the story. */
 function CompareGraphic({ f, station, market, stamp, days }: TemplateProps & { days: GraphicDay[] }) {
   const list = days.slice(0, 4).filter((day) => day.high !== null);
   const peak = Math.max(...list.flatMap((day) => [day.high ?? 0, day.feelsHigh ?? day.high ?? 0]), 1);
-  const base = 880;
-  const top = 420;
-  const colW = list.length ? (W - SAFE_X * 2) / list.length : 0;
-  const barW = 118;
-  const height = (value: number | null) => ((value ?? 0) / peak) * (base - top);
+  const panel = { x: 150, y: 286, w: 1620, h: 640 };
+  const base = panel.y + panel.h - 96;
+  const top = panel.y + 150;
+  const colW = list.length ? (panel.w - 80) / list.length : 0;
+  const barW = 124;
+  const height = (value: number | null) => Math.max(((value ?? 0) / peak) * (base - top), 4);
 
   return (
     <>
-      <Ground />
-      <TitleBar title={f.kicker || 'Highs vs Feels Like'} subtitle={f.detail || market} stamp={stamp} />
+      <SunsetScene />
+      <rect x={panel.x} y={panel.y} width={panel.w} height={panel.h} fill="#20100a" fillOpacity="0.74" />
+      <line x1={panel.x + 40} x2={panel.x + panel.w - 40} y1={panel.y + 92} y2={panel.y + 92} stroke="#ffffff" strokeOpacity="0.35" strokeWidth="2" />
+      <line x1={panel.x + 40} x2={panel.x + panel.w - 40} y1={base} y2={base} stroke="#ffffff" strokeOpacity="0.35" strokeWidth="2" />
 
-      <Card x={SAFE_X} y={248} w={W - SAFE_X * 2} h={700} />
-      <g transform={`translate(${W - SAFE_X - 420} 316)`}>
-        <rect width="26" height="26" rx="5" fill="#d99a34" />
-        <text x="40" y="22" fontFamily={FONT} fontSize="28" fontWeight="600" fill={SOFT}>
-          Forecast high
-        </text>
-        <rect x="230" width="26" height="26" rx="5" fill={ALERT_RED} />
-        <text x="270" y="22" fontFamily={FONT} fontSize="28" fontWeight="600" fill={SOFT}>
-          Feels like
-        </text>
-      </g>
+      <text x={panel.x + panel.w / 2} y={panel.y + 66} textAnchor="middle" fontFamily={FONT} fontSize="46" fontWeight="800" letterSpacing="1">
+        <tspan fill="#e8b04a">FORECAST HIGHS</tspan>
+        <tspan fill="#ffffff"> vs. </tspan>
+        <tspan fill="#ef4a3c">FEELS LIKE</tspan>
+      </text>
 
       {list.length === 0 && <Empty>Loading the forecast</Empty>}
       {list.map((day, i) => {
-        const centre = SAFE_X + colW * (i + 0.5);
+        const centre = panel.x + 40 + colW * (i + 0.5);
         const feels = day.feelsHigh ?? day.high;
         const highH = height(day.high);
         const feelsH = height(feels);
         return (
           <g key={day.date || i}>
-            <rect x={centre - barW - 12} y={base - highH} width={barW} height={highH} rx="8" fill="#d99a34" />
-            <text x={centre - barW / 2 - 12} y={base - highH - 26} textAnchor="middle" fontFamily={FONT} fontSize="54" fontWeight="800" fill="#ffffff">
+            <rect x={centre - barW - 10} y={base - highH} width={barW} height={highH} fill="#d99a34" />
+            <text x={centre - barW / 2 - 10} y={base - highH - 24} textAnchor="middle" fontFamily={FONT} fontSize="60" fontWeight="800" fill="#f4efe6">
               {formatTemp(day.high)}
             </text>
-            <rect x={centre + 12} y={base - feelsH} width={barW} height={feelsH} rx="8" fill={ALERT_RED} />
-            <text x={centre + barW / 2 + 12} y={base - feelsH - 26} textAnchor="middle" fontFamily={FONT} fontSize="54" fontWeight="800" fill="#ffffff">
+            <rect x={centre + 10} y={base - feelsH} width={barW} height={feelsH} fill={ALERT_RED} />
+            <text x={centre + barW / 2 + 10} y={base - feelsH - 24} textAnchor="middle" fontFamily={FONT} fontSize="60" fontWeight="800" fill="#f4efe6">
               {formatTemp(feels)}
             </text>
-            <text x={centre} y={base + 62} textAnchor="middle" fontFamily={FONT} fontSize="44" fontWeight="800" fill={SOFT}>
-              {i === 0 ? 'Today' : formatDayName(day.date, 'short')}
+            <text x={centre} y={base + 64} textAnchor="middle" fontFamily={FONT} fontSize="46" fontWeight="800" letterSpacing="2" fill="#ffffff">
+              {(i === 0 ? 'Today' : formatDayName(day.date, 'short')).toUpperCase()}
             </text>
           </g>
         );
       })}
-      <line x1={SAFE_X + 40} x2={W - SAFE_X - 40} y1={base} y2={base} stroke={PANEL_LINE} strokeOpacity="0.6" strokeWidth="3" />
 
+      <StationBar title={f.kicker || 'Heat Index Forecast'} subtitle={f.detail || market} stamp={stamp} />
       <Band station={station} market={market} />
     </>
   );
@@ -1463,9 +1613,9 @@ function AlertMapGraphic({
   const id = useGid();
   const shapes = useCountyShapes(!lite && places.length > 1);
   const key = places.map((p) => `${p.name}:${p.lat}:${p.lon}`).join('|');
-  const fit = useMemo(() => (places.length > 1 ? fitProjection(places) : null), [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fit = useMemo(() => (places.length > 1 ? fitProjection(places, BAR_MAP) : null), [key]); // eslint-disable-line react-hooks/exhaustive-deps
   const counties = useMemo(() => (shapes && fit ? countyShapes(shapes, fit) : []), [shapes, fit]);
-  const labels = fit ? layoutCallouts(places, fit.project, f.kicker || 'Weather Alerts') : [];
+  const labels = fit ? layoutCallouts(places, fit.project, '', BAR_MAP, { w: 236, h: 84 }, MAP_SLOTS) : [];
 
   const byCounty = new Map(areas.map((area) => [area.id, area]));
   // Legend order follows severity, so the worst alert reads first.
@@ -1475,67 +1625,65 @@ function AlertMapGraphic({
 
   return (
     <>
-      <Ground />
-      <TitleBar title={f.kicker || 'Weather Alerts'} subtitle={f.detail || 'In effect now'} stamp={stamp} color={ALERT_RED} />
-
+      <TerrainScene />
       <defs>
         <clipPath id={id('map')}>
-          <rect x={MAP.x} y={MAP.y} width={MAP.w} height={MAP.h} rx="24" />
+          <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} />
         </clipPath>
       </defs>
+
       <g clipPath={`url(#${id('map')})`}>
-        <rect x={MAP.x} y={MAP.y} width={MAP.w} height={MAP.h} fill="#07172f" />
+        <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} fill="#1d3b2a" />
         {counties.map((shape) => {
           const area = byCounty.get(shape.id);
           return (
             <path
               key={shape.id}
               d={shape.d}
-              fill={area ? area.color : '#123a6b'}
-              fillOpacity={area ? 0.82 : 0.5}
-              stroke="#04101f"
-              strokeOpacity="0.6"
-              strokeWidth="2"
+              fill={area ? area.color : '#2f5140'}
+              fillOpacity={area ? 0.92 : 0.85}
+              stroke="#0a0a0a"
+              strokeOpacity="0.7"
+              strokeWidth="2.4"
+              strokeLinejoin="round"
             />
           );
         })}
       </g>
-      <rect x={MAP.x} y={MAP.y} width={MAP.w} height={MAP.h} rx="24" fill="none" stroke={PANEL_LINE} strokeOpacity="0.55" strokeWidth="2" />
 
       {places.length < 2 && <Empty>Loading the coverage area</Empty>}
-      {/* Town names take the same collision pass as the map callouts: the
-          metro towns sit close enough to print over each other otherwise. */}
       {labels.map(({ place, px, py, cx, cy }) => {
-        const displaced = Math.hypot(cx - px, cy - py) > 120;
+        const moved = Math.hypot(cx - px, cy - py) > 40;
         return (
           <g key={place.name}>
-            {displaced && <line x1={px} y1={py} x2={cx} y2={cy - 12} stroke="#ffffff" strokeOpacity="0.6" strokeWidth="3" />}
-            <circle cx={px} cy={py} r="7" fill="#ffffff" stroke="#04101f" strokeWidth="3" />
-            <text x={cx} y={cy} textAnchor="middle" fontFamily={FONT} fontSize="34" fontWeight="700" {...OUTLINE} strokeWidth="7">
+            {moved && <line x1={px} y1={py} x2={cx} y2={cy - 18} stroke="#0a0a0a" strokeOpacity="0.6" strokeWidth="4" />}
+            <circle cx={px} cy={py} r="8" fill="#ffffff" stroke="#0a0a0a" strokeWidth="4" />
+            <text x={cx} y={cy + 12} textAnchor="middle" fontFamily={FONT} fontSize="40" fontWeight="700" {...OUTLINE} strokeWidth="9">
               {place.name}
             </text>
           </g>
         );
       })}
 
-      {legend.length > 0 && (
-        <g transform={`translate(${MAP.x + 30} ${MAP.y + MAP.h - 40 - legend.length * 54})`}>
-          {legend.map((area, i) => (
-            <g key={area.label} transform={`translate(0 ${i * 54})`}>
-              <rect width="44" height="44" rx="6" fill={area.color} stroke="#04101f" strokeWidth="2" />
-              <text x="60" y="34" fontFamily={FONT} fontSize="32" fontWeight="700" {...OUTLINE} strokeWidth="7">
-                {area.label}
-              </text>
-            </g>
-          ))}
-        </g>
-      )}
+      {legend.map((area, i) => {
+        const label = area.label.toUpperCase();
+        const width = label.length * 20 + 48;
+        return (
+          <g key={area.label} transform={`translate(${BAR_MAP.x + 36} ${BAR_MAP.y + 36 + i * 84})`}>
+            <rect width={width} height="64" fill={area.color} stroke="#0a0a0a" strokeWidth="3" />
+            <text x="24" y="43" fontFamily={FONT} fontSize="30" fontWeight="800" letterSpacing="1" fill="#0a0a0a">
+              {label}
+            </text>
+          </g>
+        );
+      })}
       {legend.length === 0 && places.length > 1 && (
-        <text x={MAP.x + 30} y={MAP.y + MAP.h - 40} fontFamily={FONT} fontSize="32" fontWeight="700" {...OUTLINE} strokeWidth="7">
+        <text x={BAR_MAP.x + 36} y={BAR_MAP.y + 80} fontFamily={FONT} fontSize="40" fontWeight="700" {...OUTLINE} strokeWidth="9">
           No active alerts
         </text>
       )}
 
+      <StationBar title={f.kicker || 'Weather Alerts'} subtitle={f.detail || 'In effect now'} stamp={stamp} />
       <Band station={station} market={market} />
     </>
   );
