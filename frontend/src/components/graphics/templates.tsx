@@ -2,7 +2,14 @@ import { createContext, useContext, useEffect, useId, useMemo, useState, type Re
 import { WeatherIcon } from '../ui/WeatherIcon';
 import { getCountyBoundaries } from '../../services/weather';
 import { formatDayName, formatTemp } from '../../utils/format';
-import type { GraphicDay, GraphicHour, GraphicOutlook, GraphicPlace, GraphicSnapshot } from '../../api/types';
+import type {
+  GraphicAlertArea,
+  GraphicDay,
+  GraphicHour,
+  GraphicOutlook,
+  GraphicPlace,
+  GraphicSnapshot,
+} from '../../api/types';
 
 /**
  * ON-AIR GRAPHIC TEMPLATES
@@ -120,6 +127,47 @@ export const GRAPHIC_TEMPLATES: TemplateDef[] = [
     group: 'Full screen',
     hint: 'Day 1-3 risk levels from the Storm Prediction Center.',
     fields: [KICKER, { key: 'detail', label: 'Threats line', wide: true, placeholder: 'Main threats: damaging wind and hail' }],
+  },
+  {
+    id: 'weatherday',
+    name: 'Weather Alert Day',
+    group: 'Full screen',
+    hint: 'The day-ahead heads-up: name the hazard and when it arrives.',
+    fields: [
+      { key: 'kicker', label: 'Banner', wide: true, placeholder: 'Weather Alert Day' },
+      { key: 'when', label: 'When', wide: true, placeholder: 'Today through Saturday' },
+      { key: 'what', label: 'What', type: 'area', wide: true, placeholder: 'Extreme heat and high humidity' },
+    ],
+  },
+  {
+    id: 'heatindex',
+    name: 'Heat Index Map',
+    group: 'Full screen',
+    hint: 'Heat index for the ticker markets, shading the county map.',
+    fields: [
+      { key: 'kicker', label: 'Title', wide: true, placeholder: "Today's Heat Index" },
+      { key: 'detail', label: 'Subtitle', wide: true, placeholder: '3:00 PM' },
+    ],
+  },
+  {
+    id: 'compare',
+    name: 'Highs vs Feels Like',
+    group: 'Full screen',
+    hint: 'The next four days, forecast high against apparent temperature.',
+    fields: [
+      { key: 'kicker', label: 'Title', wide: true, placeholder: 'Highs vs Feels Like' },
+      { key: 'detail', label: 'Subtitle', wide: true },
+    ],
+  },
+  {
+    id: 'alertmap',
+    name: 'Alert Map',
+    group: 'Full screen',
+    hint: 'Counties shaded by the alerts in force across the coverage area.',
+    fields: [
+      { key: 'kicker', label: 'Title', wide: true, placeholder: 'Weather Alerts' },
+      { key: 'detail', label: 'Subtitle', wide: true, placeholder: 'In effect now' },
+    ],
   },
   {
     id: 'headlines',
@@ -701,16 +749,36 @@ function fitProjection(places: GraphicPlace[]) {
   };
 }
 
-/** Every county that touches the frame, as one path - one node, not hundreds. */
-function countyPath(collection: GeoJSON.FeatureCollection, fit: ReturnType<typeof fitProjection>): string {
+interface CountyShape {
+  id: string;
+  name: string;
+  d: string;
+  cx: number;
+  cy: number;
+}
+
+/**
+ * Every county that touches the frame, projected once and kept separately.
+ * Separately, because the alert map fills counties individually and the heat
+ * map shades each one by the nearest town; the plain temperature map merges
+ * them back into a single path.
+ */
+function countyShapes(collection: GeoJSON.FeatureCollection, fit: ReturnType<typeof fitProjection>): CountyShape[] {
   const { bounds: b, project } = fit;
   const margin = 0.3;
-  let d = '';
+  const shapes: CountyShape[] = [];
+
   for (const feature of collection.features) {
     const geometry = feature.geometry;
     if (!geometry) continue;
     const polygons =
       geometry.type === 'Polygon' ? [geometry.coordinates] : geometry.type === 'MultiPolygon' ? geometry.coordinates : [];
+
+    let d = '';
+    let sumX = 0;
+    let sumY = 0;
+    let points = 0;
+
     for (const polygon of polygons) {
       for (const ring of polygon) {
         const touches = ring.some(
@@ -720,13 +788,28 @@ function countyPath(collection: GeoJSON.FeatureCollection, fit: ReturnType<typeo
         ring.forEach((pt, i) => {
           const [x, y] = project(pt[0], pt[1]);
           d += `${i ? 'L' : 'M'}${x.toFixed(0)} ${y.toFixed(0)}`;
+          sumX += x;
+          sumY += y;
+          points += 1;
         });
         d += 'Z';
       }
     }
+
+    if (!d) continue;
+    shapes.push({
+      id: String(feature.properties?.id ?? ''),
+      name: String(feature.properties?.name ?? ''),
+      d,
+      cx: sumX / points,
+      cy: sumY / points,
+    });
   }
-  return d;
+  return shapes;
 }
+
+/** All of them as one path: one node, when nothing needs shading per county. */
+const mergedPath = (shapes: CountyShape[]) => shapes.map((shape) => shape.d).join('');
 
 const CARD_W = 170;
 const CARD_H = 96;
@@ -824,7 +907,7 @@ function AreaTempsGraphic({ f, station, market, stamp, places, lite }: TemplateP
   const shapes = useCountyShapes(!lite && places.length > 1);
   const key = places.map((p) => `${p.name}:${p.lat}:${p.lon}`).join('|');
   const fit = useMemo(() => (places.length > 1 ? fitProjection(places) : null), [key]); // eslint-disable-line react-hooks/exhaustive-deps
-  const counties = useMemo(() => (shapes && fit ? countyPath(shapes, fit) : ''), [shapes, fit]);
+  const counties = useMemo(() => (shapes && fit ? mergedPath(countyShapes(shapes, fit)) : ''), [shapes, fit]);
   const tag = f.kicker || 'Temperatures Now';
   const callouts = fit ? layoutCallouts(places, fit.project, tag) : [];
 
@@ -1118,6 +1201,346 @@ function BugGraphic({ f, icon }: TemplateProps & { icon: string }) {
   );
 }
 
+/* ------------------------------------------------------------ title bar */
+
+/**
+ * The bar the map and chart graphics wear: station mark and title on white,
+ * over a coloured strip carrying the qualifier - the hour a map is valid for,
+ * or the days an alert covers.
+ */
+function TitleBar({
+  title,
+  subtitle,
+  stamp,
+  color = ACCENT,
+}: {
+  title: string;
+  subtitle?: string;
+  stamp?: string;
+  color?: string;
+}) {
+  const id = useGid();
+  return (
+    <g filter={`url(#${id('shadow')})`}>
+      <rect x={SAFE_X} y="48" width={W - SAFE_X * 2} height="96" fill="#ffffff" />
+      <rect x={SAFE_X} y="48" width="300" height="96" fill="#0b2552" />
+      <Tile x={SAFE_X + 18} y={62} w={94} h={68} fontSize={50} />
+      <text x={SAFE_X + 128} y="94" fontFamily={FONT} fontSize="28" fontWeight="800" fill="#ffffff">
+        STORM 12
+      </text>
+      <text x={SAFE_X + 128} y="124" fontFamily={FONT} fontSize="20" fontWeight="600" letterSpacing="4" fill="#9fb8da">
+        WEATHER
+      </text>
+      <text x={SAFE_X + 330} y="114" fontFamily={FONT} fontSize="54" fontWeight="800" fill="#0b1f3f">
+        {title.toUpperCase()}
+      </text>
+      {stamp && (
+        <text x={W - SAFE_X - 28} y="112" textAnchor="end" fontFamily={FONT} fontSize="30" fontWeight="600" fill="#5f7ea8">
+          {stamp}
+        </text>
+      )}
+      {subtitle && (
+        <>
+          <rect x={SAFE_X} y="144" width={Math.min(subtitle.length * 21 + 60, 900)} height="52" fill={color} />
+          <text x={SAFE_X + 28} y="181" fontFamily={FONT} fontSize="28" fontWeight="800" letterSpacing="2" fill="#ffffff">
+            {subtitle.toUpperCase()}
+          </text>
+        </>
+      )}
+    </g>
+  );
+}
+
+/** Map lettering: white, knocked out with a dark rim so it reads over any fill. */
+const OUTLINE = {
+  fill: '#ffffff',
+  stroke: '#04101f',
+  strokeWidth: 8,
+  strokeLinejoin: 'round' as const,
+  paintOrder: 'stroke' as const,
+};
+
+/* ------------------------------------------------------- weather alert day */
+
+/**
+ * The day-ahead heads-up: what is coming, and when. Deliberately plain - a
+ * viewer should read the two lines in the time it takes to look up.
+ */
+function WeatherDayGraphic({ f, station, market, stamp }: TemplateProps) {
+  const id = useGid();
+  const what = wrap(f.what || 'Describe the hazard here', 34, 2);
+  return (
+    <>
+      <Ground />
+      <rect x="60" y="110" width="980" height="740" rx="28" fill="#041026" fillOpacity="0.62" />
+
+      <g filter={`url(#${id('shadow')})`}>
+        <rect x="110" y="150" width="880" height="180" fill="#ffffff" />
+        <text x="146" y="206" fontFamily={FONT} fontSize="26" fontWeight="700" letterSpacing="4" fill="#0b1f3f">
+          {station.toUpperCase()}
+        </text>
+        <text
+          x="146"
+          y="288"
+          fontFamily={FONT}
+          fontSize={(f.kicker || 'Weather Alert Day').length > 18 ? 48 : 58}
+          fontWeight="800"
+          letterSpacing="-1"
+          fill={ALERT_RED}
+        >
+          {(f.kicker || 'Weather Alert Day').toUpperCase().slice(0, 24)}
+        </text>
+        <Tile x={846} y={166} w={120} h={148} fontSize={88} />
+      </g>
+
+      <text x="150" y="450" fontFamily={FONT} fontSize="44" fontWeight="800" letterSpacing="2" fill="#7fc4ff">
+        WHEN
+      </text>
+      <text x="150" y="524" fontFamily={FONT} fontSize="52" fontWeight="700" fill="#ffffff">
+        {(f.when || 'Today through Saturday').slice(0, 30)}
+      </text>
+
+      <text x="150" y="640" fontFamily={FONT} fontSize="44" fontWeight="800" letterSpacing="2" fill="#7fc4ff">
+        WHAT
+      </text>
+      {what.map((line, i) => (
+        <text key={i} x="150" y={714 + i * 66} fontFamily={FONT} fontSize="52" fontWeight="700" fill={f.what ? '#ffffff' : '#5f7ea8'}>
+          {line}
+        </text>
+      ))}
+
+      <text x={W - SAFE_X} y="118" textAnchor="end" fontFamily={FONT} fontSize="32" fontWeight="600" fill="#b9cde8">
+        {stamp}
+      </text>
+      <Band station={station} market={market} />
+    </>
+  );
+}
+
+/* --------------------------------------------------------- heat index map */
+
+/** Nearest town wins the shading: a coarse field, but an honest one. */
+function shadeByNearest(shapes: CountyShape[], places: GraphicPlace[], project: (lon: number, lat: number) => [number, number]) {
+  const points = places.map((place) => ({ place, xy: project(place.lon, place.lat) }));
+  return shapes.map((shape) => {
+    let nearest = points[0];
+    let best = Number.POSITIVE_INFINITY;
+    for (const point of points) {
+      const dx = point.xy[0] - shape.cx;
+      const dy = point.xy[1] - shape.cy;
+      const distance = dx * dx + dy * dy;
+      if (distance < best) {
+        best = distance;
+        nearest = point;
+      }
+    }
+    const value = nearest?.place.feels ?? nearest?.place.temp ?? null;
+    return { ...shape, fill: tempFill(value) };
+  });
+}
+
+function HeatIndexGraphic({ f, station, market, stamp, places, lite }: TemplateProps & { places: GraphicPlace[]; lite?: boolean }) {
+  const id = useGid();
+  const usable = places.filter((place) => place.feels !== null || place.temp !== null);
+  const shapes = useCountyShapes(!lite && usable.length > 1);
+  const key = usable.map((p) => `${p.name}:${p.lat}:${p.lon}`).join('|');
+  const fit = useMemo(() => (usable.length > 1 ? fitProjection(usable) : null), [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const shaded = useMemo(
+    () => (shapes && fit ? shadeByNearest(countyShapes(shapes, fit), usable, fit.project) : []),
+    [shapes, fit], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const callouts = fit ? layoutCallouts(usable, fit.project, '') : [];
+
+  return (
+    <>
+      <Ground />
+      <TitleBar title={f.kicker || "Today's Heat Index"} subtitle={f.detail || stamp} color={ALERT_RED} />
+
+      <defs>
+        <clipPath id={id('map')}>
+          <rect x={MAP.x} y={MAP.y} width={MAP.w} height={MAP.h} rx="24" />
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#${id('map')})`}>
+        <rect x={MAP.x} y={MAP.y} width={MAP.w} height={MAP.h} fill="#0a1f3f" />
+        {shaded.map((shape) => (
+          <path key={shape.id} d={shape.d} fill={shape.fill} fillOpacity="0.82" stroke="#04101f" strokeOpacity="0.55" strokeWidth="2" />
+        ))}
+      </g>
+      <rect x={MAP.x} y={MAP.y} width={MAP.w} height={MAP.h} rx="24" fill="none" stroke={PANEL_LINE} strokeOpacity="0.55" strokeWidth="2" />
+
+      {usable.length < 2 && <Empty>Loading the heat index</Empty>}
+      {callouts.map(({ place, px, py, cx, cy }) => {
+        const displaced = Math.hypot(cx - px, cy - py) > 120;
+        const reading = place.feels ?? place.temp;
+        return (
+          <g key={place.name}>
+            {displaced && <line x1={px} y1={py} x2={cx} y2={cy + 20} stroke="#ffffff" strokeOpacity="0.6" strokeWidth="3" />}
+            <text x={cx} y={cy + 8} textAnchor="middle" fontFamily={FONT} fontSize="78" fontWeight="800" letterSpacing="-3" {...OUTLINE}>
+              {reading === null ? '--' : Math.round(reading)}
+            </text>
+            <text x={cx} y={cy + 52} textAnchor="middle" fontFamily={FONT} fontSize="32" fontWeight="700" {...OUTLINE} strokeWidth="6">
+              {place.name}
+            </text>
+          </g>
+        );
+      })}
+
+      <Band station={station} market={market} />
+    </>
+  );
+}
+
+/* ------------------------------------------------------------- comparison */
+
+/** Forecast highs against what it will feel like: the pair is the story. */
+function CompareGraphic({ f, station, market, stamp, days }: TemplateProps & { days: GraphicDay[] }) {
+  const list = days.slice(0, 4).filter((day) => day.high !== null);
+  const peak = Math.max(...list.flatMap((day) => [day.high ?? 0, day.feelsHigh ?? day.high ?? 0]), 1);
+  const base = 880;
+  const top = 420;
+  const colW = list.length ? (W - SAFE_X * 2) / list.length : 0;
+  const barW = 118;
+  const height = (value: number | null) => ((value ?? 0) / peak) * (base - top);
+
+  return (
+    <>
+      <Ground />
+      <TitleBar title={f.kicker || 'Highs vs Feels Like'} subtitle={f.detail || market} stamp={stamp} />
+
+      <Card x={SAFE_X} y={248} w={W - SAFE_X * 2} h={700} />
+      <g transform={`translate(${W - SAFE_X - 420} 316)`}>
+        <rect width="26" height="26" rx="5" fill="#d99a34" />
+        <text x="40" y="22" fontFamily={FONT} fontSize="28" fontWeight="600" fill={SOFT}>
+          Forecast high
+        </text>
+        <rect x="230" width="26" height="26" rx="5" fill={ALERT_RED} />
+        <text x="270" y="22" fontFamily={FONT} fontSize="28" fontWeight="600" fill={SOFT}>
+          Feels like
+        </text>
+      </g>
+
+      {list.length === 0 && <Empty>Loading the forecast</Empty>}
+      {list.map((day, i) => {
+        const centre = SAFE_X + colW * (i + 0.5);
+        const feels = day.feelsHigh ?? day.high;
+        const highH = height(day.high);
+        const feelsH = height(feels);
+        return (
+          <g key={day.date || i}>
+            <rect x={centre - barW - 12} y={base - highH} width={barW} height={highH} rx="8" fill="#d99a34" />
+            <text x={centre - barW / 2 - 12} y={base - highH - 26} textAnchor="middle" fontFamily={FONT} fontSize="54" fontWeight="800" fill="#ffffff">
+              {formatTemp(day.high)}
+            </text>
+            <rect x={centre + 12} y={base - feelsH} width={barW} height={feelsH} rx="8" fill={ALERT_RED} />
+            <text x={centre + barW / 2 + 12} y={base - feelsH - 26} textAnchor="middle" fontFamily={FONT} fontSize="54" fontWeight="800" fill="#ffffff">
+              {formatTemp(feels)}
+            </text>
+            <text x={centre} y={base + 62} textAnchor="middle" fontFamily={FONT} fontSize="44" fontWeight="800" fill={SOFT}>
+              {i === 0 ? 'Today' : formatDayName(day.date, 'short')}
+            </text>
+          </g>
+        );
+      })}
+      <line x1={SAFE_X + 40} x2={W - SAFE_X - 40} y1={base} y2={base} stroke={PANEL_LINE} strokeOpacity="0.6" strokeWidth="3" />
+
+      <Band station={station} market={market} />
+    </>
+  );
+}
+
+/* --------------------------------------------------------------- alert map */
+
+function AlertMapGraphic({
+  f,
+  station,
+  market,
+  stamp,
+  places,
+  areas,
+  lite,
+}: TemplateProps & { places: GraphicPlace[]; areas: GraphicAlertArea[]; lite?: boolean }) {
+  const id = useGid();
+  const shapes = useCountyShapes(!lite && places.length > 1);
+  const key = places.map((p) => `${p.name}:${p.lat}:${p.lon}`).join('|');
+  const fit = useMemo(() => (places.length > 1 ? fitProjection(places) : null), [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  const counties = useMemo(() => (shapes && fit ? countyShapes(shapes, fit) : []), [shapes, fit]);
+  const labels = fit ? layoutCallouts(places, fit.project, f.kicker || 'Weather Alerts') : [];
+
+  const byCounty = new Map(areas.map((area) => [area.id, area]));
+  // Legend order follows severity, so the worst alert reads first.
+  const legend = [...new Map(areas.map((area) => [area.label, area])).values()]
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, 4);
+
+  return (
+    <>
+      <Ground />
+      <TitleBar title={f.kicker || 'Weather Alerts'} subtitle={f.detail || 'In effect now'} stamp={stamp} color={ALERT_RED} />
+
+      <defs>
+        <clipPath id={id('map')}>
+          <rect x={MAP.x} y={MAP.y} width={MAP.w} height={MAP.h} rx="24" />
+        </clipPath>
+      </defs>
+      <g clipPath={`url(#${id('map')})`}>
+        <rect x={MAP.x} y={MAP.y} width={MAP.w} height={MAP.h} fill="#07172f" />
+        {counties.map((shape) => {
+          const area = byCounty.get(shape.id);
+          return (
+            <path
+              key={shape.id}
+              d={shape.d}
+              fill={area ? area.color : '#123a6b'}
+              fillOpacity={area ? 0.82 : 0.5}
+              stroke="#04101f"
+              strokeOpacity="0.6"
+              strokeWidth="2"
+            />
+          );
+        })}
+      </g>
+      <rect x={MAP.x} y={MAP.y} width={MAP.w} height={MAP.h} rx="24" fill="none" stroke={PANEL_LINE} strokeOpacity="0.55" strokeWidth="2" />
+
+      {places.length < 2 && <Empty>Loading the coverage area</Empty>}
+      {/* Town names take the same collision pass as the map callouts: the
+          metro towns sit close enough to print over each other otherwise. */}
+      {labels.map(({ place, px, py, cx, cy }) => {
+        const displaced = Math.hypot(cx - px, cy - py) > 120;
+        return (
+          <g key={place.name}>
+            {displaced && <line x1={px} y1={py} x2={cx} y2={cy - 12} stroke="#ffffff" strokeOpacity="0.6" strokeWidth="3" />}
+            <circle cx={px} cy={py} r="7" fill="#ffffff" stroke="#04101f" strokeWidth="3" />
+            <text x={cx} y={cy} textAnchor="middle" fontFamily={FONT} fontSize="34" fontWeight="700" {...OUTLINE} strokeWidth="7">
+              {place.name}
+            </text>
+          </g>
+        );
+      })}
+
+      {legend.length > 0 && (
+        <g transform={`translate(${MAP.x + 30} ${MAP.y + MAP.h - 40 - legend.length * 54})`}>
+          {legend.map((area, i) => (
+            <g key={area.label} transform={`translate(0 ${i * 54})`}>
+              <rect width="44" height="44" rx="6" fill={area.color} stroke="#04101f" strokeWidth="2" />
+              <text x="60" y="34" fontFamily={FONT} fontSize="32" fontWeight="700" {...OUTLINE} strokeWidth="7">
+                {area.label}
+              </text>
+            </g>
+          ))}
+        </g>
+      )}
+      {legend.length === 0 && places.length > 1 && (
+        <text x={MAP.x + 30} y={MAP.y + MAP.h - 40} fontFamily={FONT} fontSize="32" fontWeight="700" {...OUTLINE} strokeWidth="7">
+          No active alerts
+        </text>
+      )}
+
+      <Band station={station} market={market} />
+    </>
+  );
+}
+
 /* ---------------------------------------------------------------- frame */
 
 interface GraphicSvgProps {
@@ -1152,6 +1575,18 @@ export function GraphicSvg({ data, svgRef, className, label, lite, decorative }:
       break;
     case 'severe':
       body = <SevereGraphic {...props} outlooks={data.outlooks ?? []} />;
+      break;
+    case 'weatherday':
+      body = <WeatherDayGraphic {...props} />;
+      break;
+    case 'heatindex':
+      body = <HeatIndexGraphic {...props} places={data.places ?? []} lite={lite} />;
+      break;
+    case 'compare':
+      body = <CompareGraphic {...props} days={data.days} />;
+      break;
+    case 'alertmap':
+      body = <AlertMapGraphic {...props} places={data.places ?? []} areas={data.areas ?? []} lite={lite} />;
       break;
     case 'headlines':
       body = <HeadlinesGraphic {...props} />;

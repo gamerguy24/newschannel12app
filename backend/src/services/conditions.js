@@ -277,6 +277,9 @@ export async function getDailyForecast(location, { days = 10 } = {}) {
       windGust: m?.gustMax ?? null,
       humidity: round(day?.relativeHumidity ?? night?.relativeHumidity),
       dewpoint: round(day?.dewpoint ?? night?.dewpoint),
+      // The model already computes these; a heat-index graphic needs them.
+      feelsHigh: m?.feelsHigh ?? null,
+      feelsLow: m?.feelsLow ?? null,
       uvIndexMax: m?.uvIndexMax ?? null,
       sunrise: m?.sunrise ?? null,
       sunset: m?.sunset ?? null,

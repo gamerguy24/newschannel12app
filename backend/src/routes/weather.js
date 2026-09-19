@@ -135,6 +135,8 @@ router.get(
           temperature: conditions.observation.temperature,
           condition: conditions.observation.condition,
           icon: conditions.observation.icon,
+          feelsLike: conditions.observation.feelsLike,
+          heatIndex: conditions.observation.heatIndex,
         };
       }),
     );

@@ -451,6 +451,10 @@ const PROGRAM_TEMPLATES = [
   'sevenday',
   'areatemps',
   'severe',
+  'weatherday',
+  'heatindex',
+  'compare',
+  'alertmap',
   'headlines',
   'quote',
   'alert',
@@ -486,6 +490,7 @@ export function setProgram(payload) {
     icon: text(day?.icon, 40),
     high: num(day?.high),
     low: num(day?.low),
+    feelsHigh: num(day?.feelsHigh),
     precipProbability: num(day?.precipProbability),
   }));
 
@@ -506,9 +511,17 @@ export function setProgram(payload) {
       lat: num(place?.lat),
       lon: num(place?.lon),
       temp: num(place?.temp),
+      feels: num(place?.feels),
       icon: text(place?.icon, 40),
     }))
     .filter((place) => place.name && place.lat !== null && place.lon !== null);
+  // One entry per county under an alert - a statewide event is a few hundred.
+  const areas = (Array.isArray(payload.areas) ? payload.areas : []).slice(0, 400).map((area) => ({
+    id: text(area?.id, 8),
+    label: text(area?.label, 60),
+    color: hexColor(area?.color),
+    rank: num(area?.rank) ?? 99,
+  }));
   const outlooks = (Array.isArray(payload.outlooks) ? payload.outlooks : []).slice(0, 3).map((outlook) => ({
     day: text(outlook?.day, 8),
     label: text(outlook?.label, 60),
@@ -526,6 +539,7 @@ export function setProgram(payload) {
     hours,
     places,
     outlooks,
+    areas,
     icon: text(payload.icon, 40) || 'cloudy',
     stamp: text(payload.stamp, 60),
     station: text(payload.station, 60) || getStationIdentity().name,

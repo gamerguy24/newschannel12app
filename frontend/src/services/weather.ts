@@ -62,7 +62,16 @@ export const getDaily = (loc: LatLon, days = 10, signal?: AbortSignal) =>
 /** Current conditions for the station's market list - the ticker towns. */
 export const getMarkets = (signal?: AbortSignal) =>
   apiGet<{
-    markets: Array<{ name: string; lat: number; lon: number; temperature: number | null; condition: string | null; icon: string }>;
+    markets: Array<{
+      name: string;
+      lat: number;
+      lon: number;
+      temperature: number | null;
+      condition: string | null;
+      icon: string;
+      feelsLike: number | null;
+      heatIndex: number | null;
+    }>;
   }>('/weather/markets', undefined, { signal });
 
 export interface Overview {

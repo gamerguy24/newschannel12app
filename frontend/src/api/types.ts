@@ -135,6 +135,9 @@ export interface DailyEntry {
   windGust: number | null;
   humidity: number | null;
   dewpoint: number | null;
+  /** Apparent-temperature range: what a heat-index graphic plots. */
+  feelsHigh: number | null;
+  feelsLow: number | null;
   uvIndexMax: number | null;
   sunrise: string | null;
   sunset: string | null;
@@ -516,6 +519,7 @@ export interface GraphicDay {
   icon: string;
   high: number | null;
   low: number | null;
+  feelsHigh: number | null;
   precipProbability: number | null;
 }
 
@@ -540,7 +544,18 @@ export interface GraphicPlace {
   lat: number;
   lon: number;
   temp: number | null;
+  /** Heat index where one applies, otherwise apparent temperature. */
+  feels: number | null;
   icon: string;
+}
+
+/** One county under an alert, for the alert map. */
+export interface GraphicAlertArea {
+  /** County FIPS, matching the id on the county outlines. */
+  id: string;
+  label: string;
+  color: string;
+  rank: number;
 }
 
 /** One SPC convective outlook day. Level runs -1 (none), 0 (thunder), 1-5. */
@@ -559,6 +574,7 @@ export interface GraphicSnapshot {
   hours?: GraphicHour[];
   places?: GraphicPlace[];
   outlooks?: GraphicOutlook[];
+  areas?: GraphicAlertArea[];
   icon: string;
   stamp: string;
   station: string;

@@ -9,6 +9,7 @@ import { clearProgram, deleteGraphic, saveGraphic, takeProgram } from '../../ser
 import { formatDayName, formatRelative, formatTemp, formatTime, formatWind } from '../../utils/format';
 import type {
   AdminState,
+  GraphicAlertArea,
   GraphicDay,
   GraphicHour,
   GraphicOutlook,
@@ -139,6 +140,7 @@ export function GraphicsStudio({ state, onSaved }: { state: AdminState; onSaved:
     icon: d.icon,
     high: d.high,
     low: d.low,
+    feelsHigh: d.feelsHigh,
     precipProbability: d.precipProbability,
   }));
 
@@ -173,8 +175,29 @@ export function GraphicsStudio({ state, onSaved }: { state: AdminState; onSaved:
     lat: m.lat,
     lon: m.lon,
     temp: m.temperature,
+    // Heat index where the air warrants one, apparent temperature otherwise.
+    feels: m.heatIndex ?? m.feelsLike,
     icon: m.icon,
   }));
+
+  // Which counties are under which alert, for the alert map. SAME codes are
+  // the county FIPS with a leading zero, which is how they match the outlines.
+  const areaByCounty = new Map<string, GraphicAlertArea>();
+  for (const alert of [
+    ...(severe.data?.warnings ?? []),
+    ...(severe.data?.watches ?? []),
+    ...(severe.data?.advisories ?? []),
+  ]) {
+    for (const same of alert.same ?? []) {
+      const id = same.replace(/^0/, '');
+      const held = areaByCounty.get(id);
+      // Lower rank is more severe: the worst alert owns the county's colour.
+      if (!held || alert.rank < held.rank) {
+        areaByCounty.set(id, { id, label: alert.event, color: alert.color, rank: alert.rank });
+      }
+    }
+  }
+  const areas: GraphicAlertArea[] = [...areaByCounty.values()];
 
   const outlooks: GraphicOutlook[] = (severe.data?.outlooks ?? []).map((o) => ({
     day: o.day,
@@ -196,6 +219,7 @@ export function GraphicsStudio({ state, onSaved }: { state: AdminState; onSaved:
       hours,
       places,
       outlooks,
+      areas,
       icon: obs?.icon ?? 'cloudy',
       stamp,
       station,
