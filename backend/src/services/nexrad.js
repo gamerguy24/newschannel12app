@@ -329,38 +329,47 @@ const PALETTES = {
   ],
 };
 
-/** Build a 256-entry RGBA lookup so rasterising is a table read per pixel. */
-function buildLookup(sweep, paletteName) {
-  const stops = PALETTES[paletteName] ?? PALETTES.reflectivity;
-  const table = new Uint8Array(256 * 4);
+/** The colour for a value in the product's units, or null below the floor. */
+function paletteColour(stops, value) {
+  if (value < stops[0][0]) return null;
 
-  for (let level = 0; level < 256; level += 1) {
-    // Below threshold and range folded draw as nothing, which is what keeps a
-    // clear day transparent instead of a blue wash.
-    if (!hasReading(sweep, level)) continue;
-
-    const value = levelToValue(sweep, level);
-    if (value < stops[0][0]) continue;
-
-    let colour = stops[stops.length - 1];
-    for (let i = 0; i < stops.length - 1; i += 1) {
-      const [v0, r0, g0, b0] = stops[i];
-      const [v1, r1, g1, b1] = stops[i + 1];
-      if (value >= v0 && value <= v1) {
-        const t = v1 === v0 ? 0 : (value - v0) / (v1 - v0);
-        colour = [value, r0 + (r1 - r0) * t, g0 + (g1 - g0) * t, b0 + (b1 - b0) * t];
-        break;
-      }
+  let colour = stops[stops.length - 1];
+  for (let i = 0; i < stops.length - 1; i += 1) {
+    const [v0, r0, g0, b0] = stops[i];
+    const [v1, r1, g1, b1] = stops[i + 1];
+    if (value >= v0 && value <= v1) {
+      const t = v1 === v0 ? 0 : (value - v0) / (v1 - v0);
+      return [r0 + (r1 - r0) * t, g0 + (g1 - g0) * t, b0 + (b1 - b0) * t];
     }
+  }
+  return [colour[1], colour[2], colour[3]];
+}
 
-    const at = level * 4;
-    table[at] = colour[1];
-    table[at + 1] = colour[2];
-    table[at + 2] = colour[3];
+/**
+ * A fine ramp through the palette, indexed by value rather than by data level.
+ *
+ * Painting straight from the sixteen or so data levels is what makes a sweep
+ * look like a mosaic of coloured tiles. Interpolating the value first and then
+ * reading a ramp gives the continuous wash a viewer expects, and it costs one
+ * table read per pixel either way.
+ */
+function buildRamp(paletteName, steps = 1024) {
+  const stops = PALETTES[paletteName] ?? PALETTES.reflectivity;
+  const min = stops[0][0];
+  const max = stops[stops.length - 1][0];
+  const table = new Uint8Array(steps * 4);
+
+  for (let i = 0; i < steps; i += 1) {
+    const colour = paletteColour(stops, min + ((max - min) * i) / (steps - 1));
+    if (!colour) continue;
+    const at = i * 4;
+    table[at] = colour[0];
+    table[at + 1] = colour[1];
+    table[at + 2] = colour[2];
     table[at + 3] = 255;
   }
 
-  return table;
+  return { table, min, max, steps };
 }
 
 /* -------------------------------------------------------------- rasterise */
@@ -375,10 +384,16 @@ const inverseMercatorY = (y) => ((2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 18
  * Rendering in Mercator (rather than plain lat/lon) is what lets Leaflet place
  * the result with a simple image overlay: the map stretches the picture
  * linearly in projected space, which is exactly the space it was drawn in.
- * Each output pixel is inverse-projected, turned into a bearing and range from
- * the radar, and read straight out of the polar array.
+ * Each output pixel is inverse-projected and turned into a bearing and range
+ * from the radar, which lands between four polar samples rather than on one.
+ *
+ * Those four are blended, in the product's own units rather than in colour, so
+ * a boundary between two data levels comes out as a gradient instead of a
+ * staircase. Only samples that carry a reading contribute, and the nearest one
+ * has to carry a reading at all - otherwise echoes would bleed outward into
+ * clear sky by half a gate everywhere along their edge.
  */
-export function rasterise(sweep, { size = 1000, palette = 'reflectivity', rangeKm } = {}) {
+export function rasterise(sweep, { size = 2048, palette = 'reflectivity', rangeKm } = {}) {
   const gateKm = sweep.gateKm || (rangeKm ?? sweep.binCount * 0.25) / sweep.binCount;
   const reach = gateKm * sweep.binCount;
 
@@ -391,15 +406,27 @@ export function rasterise(sweep, { size = 1000, palette = 'reflectivity', rangeK
 
   const yTop = mercatorY(north);
   const yBottom = mercatorY(south);
-  const lookup = buildLookup(sweep, palette);
+  const ramp = buildRamp(palette);
+  const rampScale = (ramp.steps - 1) / (ramp.max - ramp.min);
+
+  // Levels resolved once, so the inner loop never calls through a closure.
+  const levelValue = new Float32Array(256);
+  const levelValid = new Uint8Array(256);
+  for (let level = 0; level < 256; level += 1) {
+    if (!hasReading(sweep, level)) continue;
+    levelValid[level] = 1;
+    levelValue[level] = levelToValue(sweep, level);
+  }
 
   const rgba = Buffer.alloc(size * size * 4);
   const latRad = (sweep.latitude * Math.PI) / 180;
   const cosLat0 = Math.cos(latRad);
   const sinLat0 = Math.sin(latRad);
 
-  // Azimuths are a regular half-degree grid, so the radial index is direct.
-  const radialStep = 360 / sweep.radialCount;
+  const { gates, binCount, radialCount } = sweep;
+  // Azimuths are a regular grid, so the radial index is direct. Both indices
+  // are measured to the centre of a cell, which is where its value belongs.
+  const radialStep = 360 / radialCount;
   const azimuthStart = sweep.azimuths[0];
 
   for (let py = 0; py < size; py += 1) {
@@ -418,8 +445,11 @@ export function rasterise(sweep, { size = 1000, palette = 'reflectivity', rangeK
       const distKm = Math.acos(Math.min(1, Math.max(-1, cosD))) * R_EARTH_KM;
       if (distKm > reach) continue;
 
-      const gate = Math.floor(distKm / gateKm) - sweep.firstBin;
-      if (gate < 0 || gate >= sweep.binCount) continue;
+      const gf = distKm / gateKm - sweep.firstBin - 0.5;
+      const g0 = Math.floor(gf);
+      const g1 = g0 + 1;
+      if (g1 < 0 || g0 >= binCount) continue;
+      const tg = gf - g0;
 
       let bearing =
         (Math.atan2(
@@ -430,18 +460,65 @@ export function rasterise(sweep, { size = 1000, palette = 'reflectivity', rangeK
         Math.PI;
       if (bearing < 0) bearing += 360;
 
-      let radial = Math.round((bearing - azimuthStart) / radialStep);
-      radial = ((radial % sweep.radialCount) + sweep.radialCount) % sweep.radialCount;
+      const rfIndex = (bearing - azimuthStart) / radialStep - 0.5;
+      let r0 = Math.floor(rfIndex);
+      const tr = rfIndex - r0;
+      r0 = ((r0 % radialCount) + radialCount) % radialCount;
+      const r1 = (r0 + 1) % radialCount;
 
-      const level = sweep.gates[radial * sweep.binCount + gate];
-      const at = level * 4;
-      if (lookup[at + 3] === 0) continue;
+      // The echo keeps the footprint the data gives it: the sample this pixel
+      // actually falls in decides whether anything is drawn here.
+      const gNear = tg < 0.5 ? g0 : g1;
+      const rNear = tr < 0.5 ? r0 : r1;
+      if (gNear < 0 || gNear >= binCount) continue;
+      if (!levelValid[gates[rNear * binCount + gNear]]) continue;
+
+      let sum = 0;
+      let weight = 0;
+      if (g0 >= 0) {
+        const w = 1 - tg;
+        const a = gates[r0 * binCount + g0];
+        const b = gates[r1 * binCount + g0];
+        if (levelValid[a]) {
+          const ww = w * (1 - tr);
+          sum += levelValue[a] * ww;
+          weight += ww;
+        }
+        if (levelValid[b]) {
+          const ww = w * tr;
+          sum += levelValue[b] * ww;
+          weight += ww;
+        }
+      }
+      if (g1 < binCount) {
+        const a = gates[r0 * binCount + g1];
+        const b = gates[r1 * binCount + g1];
+        if (levelValid[a]) {
+          const ww = tg * (1 - tr);
+          sum += levelValue[a] * ww;
+          weight += ww;
+        }
+        if (levelValid[b]) {
+          const ww = tg * tr;
+          sum += levelValue[b] * ww;
+          weight += ww;
+        }
+      }
+      if (weight <= 0) continue;
+
+      const value = sum / weight;
+      if (value < ramp.min) continue;
+      let index = Math.round((value - ramp.min) * rampScale);
+      if (index > ramp.steps - 1) index = ramp.steps - 1;
+
+      const at = index * 4;
+      if (ramp.table[at + 3] === 0) continue;
 
       const out = (py * size + px) * 4;
-      rgba[out] = lookup[at];
-      rgba[out + 1] = lookup[at + 1];
-      rgba[out + 2] = lookup[at + 2];
-      rgba[out + 3] = lookup[at + 3];
+      rgba[out] = ramp.table[at];
+      rgba[out + 1] = ramp.table[at + 1];
+      rgba[out + 2] = ramp.table[at + 2];
+      rgba[out + 3] = ramp.table[at + 3];
     }
   }
 
@@ -512,7 +589,9 @@ export function encodePng(rgba, width, height) {
  * The newest sweep for a site, decoded and painted. Cached for two minutes:
  * the radar itself only produces a new volume scan every four to six.
  */
-export async function getSweepImage(site, productId = 'N0B', { size = 1000 } = {}) {
+// 2048 across the sweep puts roughly two output pixels on every super-res
+// gate, so zooming in shows the data rather than the canvas it was drawn on.
+export async function getSweepImage(site, productId = 'N0B', { size = 2048 } = {}) {
   const product = NEXRAD_PRODUCTS[productId] ?? NEXRAD_PRODUCTS.N0B;
   const cacheKey = `nexrad:${siteKey(site)}:${product.id}:${size}`;
 
