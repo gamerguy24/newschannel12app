@@ -37,7 +37,7 @@ import type {
  * air with the numbers current at the moment of the take.
  */
 
-const GROUPS = ['Full screen', 'Overlays'] as const;
+const GROUPS = ['Full screen', 'Maps', 'Overlays'] as const;
 
 /** Every field any template fills from the live observation. */
 const LIVE_KEYS = Array.from(

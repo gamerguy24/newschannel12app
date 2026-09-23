@@ -59,7 +59,7 @@ const DEFAULT_ACTIVE = ['N0B', 'counties', 'places', 'radar-sites', 'warnings', 
  */
 const RENAMED_LAYERS: Record<string, string> = {
   reflectivity: 'N0B',
-  velocity: 'N0U',
+  velocity: 'N0S',
   'precip-type': 'N0B',
 };
 

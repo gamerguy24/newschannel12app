@@ -254,7 +254,7 @@ router.get(
         // they replace are gone from the map rather than sitting alongside
         // them showing the same field from a different source.
         .filter((p) =>
-          ['N0B', 'N0U', 'N0C', 'N0X', 'composite', 'satellite', 'lightning', 'temperature'].includes(p.id),
+          ['N0B', 'N0S', 'N0C', 'N0X', 'composite', 'satellite', 'lightning', 'temperature'].includes(p.id),
         )
         .map((p) => ({
           id: p.id,

@@ -7,7 +7,6 @@ import type {
   GraphicOutlookShape,
   GraphicDay,
   GraphicHour,
-  GraphicOutlook,
   GraphicPlace,
   GraphicSnapshot,
 } from '../../api/types';
@@ -41,9 +40,7 @@ const ACCENT = '#2f7bff';
 const ALERT_RED = '#d0142c';
 const PANEL = '#06183a';
 const PANEL_LINE = '#3a6cc4';
-const DIM = '#a9c1e2';
 const SOFT = '#dbe7f5';
-const RAIN = '#7fc4ff';
 
 /* ------------------------------------------------------------- registry */
 
@@ -63,7 +60,7 @@ export interface TemplateField {
 export interface TemplateDef {
   id: string;
   name: string;
-  group: 'Full screen' | 'Overlays';
+  group: 'Full screen' | 'Maps' | 'Overlays';
   /** Overlays carry no ground: they export and play out with alpha. */
   overlay?: boolean;
   hint?: string;
@@ -80,112 +77,130 @@ const HEADLINE: TemplateField = { key: 'headline', label: 'Headline', wide: true
 const DETAIL: TemplateField = { key: 'detail', label: 'Detail', type: 'area', wide: true };
 const live = (key: string, label: string): TemplateField => ({ key, label, live: true });
 
+/** Every full-screen graphic can dress for the event it covers. */
+const SCENE: TemplateField = {
+  key: 'scene',
+  label: 'Backdrop',
+  type: 'select',
+  options: [
+    { value: 'storm', label: 'Storm - heavy cloud' },
+    { value: 'sunset', label: 'Heat - low sun' },
+    { value: 'winter', label: 'Winter - snow' },
+  ],
+};
+
+const TITLE = (placeholder: string): TemplateField => ({ key: 'kicker', label: 'Title', wide: true, placeholder });
+
+
 export const GRAPHIC_TEMPLATES: TemplateDef[] = [
   {
-    id: 'conditions',
-    name: 'Current Conditions',
+    id: 'twopanel',
+    name: 'Two Day Outlook',
     group: 'Full screen',
-    hint: 'Filled from the live observation. Type to override a value.',
+    hint: 'Two days side by side - the weekend, or tonight and tomorrow. Leave a label blank to use the day name.',
     fields: [
-      KICKER,
-      live('temperature', 'Temperature'),
-      live('condition', 'Condition'),
-      live('feelsLike', 'Feels like'),
-      live('wind', 'Wind'),
-      live('humidity', 'Humidity'),
-      live('location', 'Location'),
+      SCENE,
+      TITLE('Your Forecast'),
+      {
+        key: 'span',
+        label: 'Days',
+        type: 'select',
+        options: [
+          { value: 'next', label: 'Next two days' },
+          { value: 'weekend', label: 'Saturday and Sunday' },
+        ],
+      },
+      { key: 'labelA', label: 'Left panel' },
+      { key: 'labelB', label: 'Right panel' },
+      { key: 'noteA', label: 'Left note', wide: true, placeholder: 'Rain ends, clearing skies' },
+      { key: 'noteB', label: 'Right note', wide: true, placeholder: 'Partly cloudy' },
     ],
   },
   {
-    id: 'hourly',
-    name: 'Next 12 Hours',
+    id: 'hourstrip',
+    name: 'Hour by Hour',
     group: 'Full screen',
-    hint: 'Temperatures, sky and rain chances from the live hourly forecast.',
-    fields: [KICKER],
+    hint: 'The next seven hours from the live forecast.',
+    fields: [SCENE, TITLE('Hour by Hour Forecast')],
   },
   {
-    id: 'planner',
-    name: 'Day Planner',
+    id: 'raintiming',
+    name: 'Rain Chance Timing',
     group: 'Full screen',
-    hint: 'Morning, afternoon and evening from the live hourly forecast.',
-    fields: [KICKER],
+    hint: 'Rain chance every second hour, so five columns cover ten hours.',
+    fields: [SCENE, TITLE('Rain Chance Timing')],
   },
   {
-    id: 'sevenday',
-    name: 'Seven Day',
+    id: 'threeperiod',
+    name: 'Forecast Periods',
     group: 'Full screen',
-    hint: 'Days, icons and temperatures from the live 7-day forecast.',
-    fields: [KICKER],
+    hint: 'This afternoon, tonight and tomorrow from the live forecast.',
+    fields: [
+      SCENE,
+      TITLE('Forecast'),
+      { key: 'labelA', label: 'First' },
+      { key: 'labelB', label: 'Second' },
+      { key: 'labelC', label: 'Third' },
+    ],
+  },
+  {
+    id: 'records',
+    name: 'Records and Normals',
+    group: 'Full screen',
+    hint: 'The high fills from the forecast. Normals and records are in no free feed, so type them in - a field left blank drops its row.',
+    fields: [
+      SCENE,
+      TITLE('Todays Records'),
+      { key: 'date', label: 'Date' },
+      { key: 'high', label: 'High' },
+      { key: 'normal', label: 'Normal high' },
+      { key: 'record', label: 'Record high' },
+      { key: 'year', label: 'Year set' },
+    ],
+  },
+  {
+    id: 'activity',
+    name: 'Activity Forecast',
+    group: 'Full screen',
+    hint: 'Three days for one question - mowing, washing the car, the game tonight.',
+    fields: [SCENE, TITLE('Lawn Mowing Forecast')],
+  },
+  {
+    id: 'kids',
+    name: 'Weather Kids',
+    group: 'Full screen',
+    hint: 'Todays forecast beside a viewers name and town.',
+    fields: [
+      SCENE,
+      TITLE('Weather Kids'),
+      { key: 'labelA', label: 'Forecast heading' },
+      { key: 'labelB', label: 'Panel heading' },
+      { key: 'name', label: 'Name' },
+      { key: 'town', label: 'Town' },
+      { key: 'message', label: 'Message', wide: true, placeholder: 'Thanks for sending us your weather picture!' },
+    ],
   },
   {
     id: 'areatemps',
     name: 'Area Temperatures',
-    group: 'Full screen',
-    hint: 'Current temperatures for the ticker markets on the county map. Edit the list under Ticker & Markets.',
+    group: 'Maps',
+    hint: 'Current temperatures for the ticker markets. Edit the list under Ticker & Markets.',
     fields: [KICKER],
-  },
-  {
-    id: 'severe',
-    name: 'Severe Outlook',
-    group: 'Full screen',
-    hint: 'Day 1-3 risk levels from the Storm Prediction Center.',
-    fields: [KICKER, { key: 'detail', label: 'Threats line', wide: true, placeholder: 'Main threats: damaging wind and hail' }],
-  },
-  {
-    id: 'weatherday',
-    name: 'Weather Alert Day',
-    group: 'Full screen',
-    hint: 'The day-ahead heads-up: name the hazard and when it arrives.',
-    fields: [
-      {
-        key: 'scene',
-        label: 'Backdrop',
-        type: 'select',
-        options: [
-          { value: 'sunset', label: 'Heat - low sun' },
-          { value: 'storm', label: 'Storm - heavy cloud' },
-          { value: 'winter', label: 'Winter - snow' },
-        ],
-      },
-      { key: 'kicker', label: 'Banner', wide: true, placeholder: 'Weather Alert Day' },
-      { key: 'when', label: 'When', wide: true, placeholder: 'Today through Saturday' },
-      { key: 'what', label: 'What', type: 'area', wide: true, placeholder: 'Extreme heat and high humidity' },
-    ],
   },
   {
     id: 'heatindex',
     name: 'Heat Index Map',
-    group: 'Full screen',
+    group: 'Maps',
     hint: 'Heat index for the ticker markets, shading the county map.',
     fields: [
-      { key: 'kicker', label: 'Title', wide: true, placeholder: "Today's Heat Index" },
+      { key: 'kicker', label: 'Title', wide: true, placeholder: 'Todays Heat Index' },
       { key: 'detail', label: 'Subtitle', wide: true, placeholder: '3:00 PM' },
-    ],
-  },
-  {
-    id: 'compare',
-    name: 'Highs vs Feels Like',
-    group: 'Full screen',
-    hint: 'The next four days, forecast high against apparent temperature.',
-    fields: [
-      {
-        key: 'scene',
-        label: 'Backdrop',
-        type: 'select',
-        options: [
-          { value: 'sunset', label: 'Heat - low sun' },
-          { value: 'storm', label: 'Storm - heavy cloud' },
-          { value: 'winter', label: 'Winter - snow' },
-        ],
-      },
-      { key: 'kicker', label: 'Title', wide: true, placeholder: 'Highs vs Feels Like' },
-      { key: 'detail', label: 'Subtitle', wide: true },
     ],
   },
   {
     id: 'alertmap',
     name: 'Alert Map',
-    group: 'Full screen',
+    group: 'Maps',
     hint: 'Counties shaded by the alerts in force across the coverage area.',
     fields: [
       { key: 'kicker', label: 'Title', wide: true, placeholder: 'Weather Alerts' },
@@ -195,26 +210,13 @@ export const GRAPHIC_TEMPLATES: TemplateDef[] = [
   {
     id: 'spcmap',
     name: 'SPC Outlook',
-    group: 'Full screen',
+    group: 'Maps',
     hint: 'Use Plot outlook below to draw the latest Storm Prediction Center risk areas over the coverage area.',
     fields: [
       { key: 'kicker', label: 'Title', wide: true, placeholder: 'Severe Weather Outlook' },
       { key: 'detail', label: 'Subtitle', wide: true, placeholder: 'Storm Prediction Center' },
     ],
   },
-  {
-    id: 'headlines',
-    name: 'Weather Headlines',
-    group: 'Full screen',
-    fields: [
-      KICKER,
-      HEADLINE,
-      { key: 'line1', label: 'Point 1', wide: true },
-      { key: 'line2', label: 'Point 2', wide: true },
-      { key: 'line3', label: 'Point 3', wide: true },
-    ],
-  },
-  { id: 'quote', name: 'Forecast Statement', group: 'Full screen', fields: [KICKER, HEADLINE, DETAIL] },
   { id: 'alert', name: 'Alert Lower Third', group: 'Overlays', overlay: true, fields: [KICKER, HEADLINE, DETAIL] },
   {
     id: 'ltconditions',
@@ -278,24 +280,6 @@ function tempFill(t: number | null): string {
   if (t < 80) return '#f5d04a';
   if (t < 90) return '#f5963b';
   return '#e8513a';
-}
-
-/** Catmull-Rom through the points, as cubic Beziers: a curve, not a zigzag. */
-function smoothPath(points: Array<[number, number]>): string {
-  if (points.length < 2) return '';
-  let d = `M${points[0][0].toFixed(1)} ${points[0][1].toFixed(1)}`;
-  for (let i = 0; i < points.length - 1; i += 1) {
-    const p0 = points[i - 1] ?? points[i];
-    const p1 = points[i];
-    const p2 = points[i + 1];
-    const p3 = points[i + 2] ?? p2;
-    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
-    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
-    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
-    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
-    d += ` C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)} ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
-  }
-  return d;
 }
 
 function wrap(text: string, width: number, maxLines: number): string[] {
@@ -430,35 +414,6 @@ function Tag({ x, y, text, color = ACCENT }: { x: number; y: number; text: strin
   );
 }
 
-function Title({ children, muted }: { children: ReactNode; muted?: boolean }) {
-  return (
-    <text x={SAFE_X} y="356" fontFamily={FONT} fontSize="60" fontWeight="700" fill={muted ? '#5f7ea8' : '#ffffff'}>
-      {children}
-    </text>
-  );
-}
-
-function Card({ x, y, w, h, accent, highlight }: { x: number; y: number; w: number; h: number; accent?: string; highlight?: boolean }) {
-  const id = useGid();
-  return (
-    <>
-      <rect
-        x={x}
-        y={y}
-        width={w}
-        height={h}
-        rx="22"
-        fill={highlight ? '#123f86' : `url(#${id('panel')})`}
-        fillOpacity={highlight ? 0.85 : 1}
-        stroke={PANEL_LINE}
-        strokeOpacity={highlight ? 0.85 : 0.45}
-        strokeWidth="2"
-      />
-      {accent && <path d={`M${x + 22} ${y} H${x + w - 22} A22 22 0 0 1 ${x + w} ${y + 22} V${y + 10} H${x} V${y + 22} A22 22 0 0 1 ${x + 22} ${y} Z`} fill={accent} />}
-    </>
-  );
-}
-
 /** Bottom brand band shared by every full-screen template. */
 function Band({ station, market }: { station: string; market: string }) {
   const id = useGid();
@@ -497,235 +452,6 @@ interface TemplateProps {
   station: string;
   market: string;
   stamp: string;
-}
-
-function ConditionsGraphic({ f, station, market, stamp, icon }: TemplateProps & { icon: string }) {
-  const id = useGid();
-  const rows: Array<[string, string | undefined]> = [
-    ['Feels like', f.feelsLike],
-    ['Wind', f.wind],
-    ['Humidity', f.humidity],
-  ];
-  return (
-    <>
-      <Ground />
-      <Header stamp={stamp} />
-      <Tag x={SAFE_X} y={236} text={f.kicker || 'Current Conditions'} />
-      <Title>{f.location || market}</Title>
-
-      <g transform="translate(70 420)">
-        <WeatherIcon name={icon} size={230} animated={false} />
-      </g>
-      <text x="320" y="660" fontFamily={FONT} fontSize="300" fontWeight="800" letterSpacing="-12" fill="#ffffff" filter={`url(#${id('shadow')})`}>
-        {f.temperature || '--'}
-      </text>
-      <text x={SAFE_X + 6} y="780" fontFamily={FONT} fontSize="68" fontWeight="700" fill={SOFT}>
-        {f.condition}
-      </text>
-
-      <Card x={1150} y={236} w={680} h={600} />
-      {rows.map(([label, value], i) => {
-        const top = 236 + i * 200;
-        return (
-          <g key={label}>
-            <text x="1200" y={top + 82} fontFamily={FONT} fontSize="34" fontWeight="500" fill={DIM}>
-              {label}
-            </text>
-            <text x="1200" y={top + 160} fontFamily={FONT} fontSize="72" fontWeight="800" fill="#ffffff">
-              {value || '--'}
-            </text>
-            {i < rows.length - 1 && (
-              <line x1="1200" x2="1780" y1={top + 200} y2={top + 200} stroke={PANEL_LINE} strokeOpacity="0.35" strokeWidth="2" />
-            )}
-          </g>
-        );
-      })}
-
-      <Band station={station} market={market} />
-    </>
-  );
-}
-
-/** Next 12 hours: a temperature curve over the hours, rain chances beneath. */
-function HourlyGraphic({ f, station, market, stamp, hours }: TemplateProps & { hours: GraphicHour[] }) {
-  const id = useGid();
-  const list = hours.slice(0, 12);
-  const panel = { x: SAFE_X, y: 400, w: W - SAFE_X * 2, h: 540 };
-  const colW = panel.w / 12;
-  const cx = (i: number) => panel.x + colW * (i + 0.5);
-
-  const temps = list.map((h) => h.temp).filter((t): t is number => t !== null);
-  const hi = temps.length ? Math.max(...temps) : 0;
-  const lo = temps.length ? Math.min(...temps) : 0;
-  // A flat evening still gets a readable curve: never less than 6 degrees tall.
-  const span = Math.max(hi - lo, 6);
-  const mid = (hi + lo) / 2;
-  const top = 648;
-  const bottom = 772;
-  const yFor = (t: number) => (top + bottom) / 2 - ((t - mid) / span) * (bottom - top);
-
-  const points = list
-    .map((h, i) => (h.temp === null ? null : ([cx(i), yFor(h.temp)] as [number, number])))
-    .filter((p): p is [number, number] => p !== null);
-  const line = smoothPath(points);
-  const floor = 812;
-  const area = points.length > 1 ? `${line} L${points[points.length - 1][0]} ${floor} L${points[0][0]} ${floor} Z` : '';
-
-  return (
-    <>
-      <Ground />
-      <Header stamp={stamp} />
-      <Tag x={SAFE_X} y={236} text={f.kicker || 'Next 12 Hours'} />
-      <Title>{market}</Title>
-
-      <defs>
-        <linearGradient id={id('curve-fill')} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ffc93d" stopOpacity="0.34" />
-          <stop offset="100%" stopColor="#ffc93d" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <Card x={panel.x} y={panel.y} w={panel.w} h={panel.h} />
-
-      {list.length === 0 ? (
-        <Empty>Loading the hourly forecast</Empty>
-      ) : (
-        <>
-          <rect x={panel.x + 2} y={panel.y + 2} width={colW - 2} height={panel.h - 4} rx="20" fill="#ffffff" fillOpacity="0.05" />
-          {area && <path d={area} fill={`url(#${id('curve-fill')})`} />}
-          {line && <path d={line} fill="none" stroke="#ffc93d" strokeWidth="6" strokeLinecap="round" />}
-
-          {list.map((h, i) => {
-            const y = h.temp === null ? null : yFor(h.temp);
-            const precip = Math.max(0, Math.min(100, h.precip ?? 0));
-            const barH = (precip / 100) * 56;
-            return (
-              <g key={h.time || i}>
-                {i > 0 && (
-                  <line x1={panel.x + colW * i} x2={panel.x + colW * i} y1={panel.y + 30} y2={panel.y + 150} stroke={PANEL_LINE} strokeOpacity="0.25" strokeWidth="2" />
-                )}
-                <text x={cx(i)} y="458" textAnchor="middle" fontFamily={FONT} fontSize="30" fontWeight="700" fill={i === 0 ? '#ffffff' : SOFT}>
-                  {i === 0 ? 'Now' : h.label}
-                </text>
-                <g transform={`translate(${cx(i) - 44} 472)`}>
-                  <WeatherIcon name={h.icon} size={88} animated={false} />
-                </g>
-                {y !== null && (
-                  <>
-                    <text x={cx(i)} y={y - 26} textAnchor="middle" fontFamily={FONT} fontSize="42" fontWeight="800" fill="#ffffff">
-                      {formatTemp(h.temp)}
-                    </text>
-                    <circle cx={cx(i)} cy={y} r="9" fill="#ffffff" stroke="#ffc93d" strokeWidth="4" />
-                  </>
-                )}
-                <rect x={cx(i) - 30} y={886 - 56} width="60" height="56" rx="6" fill="#1a3358" />
-                {barH > 0 && <rect x={cx(i) - 30} y={886 - barH} width="60" height={barH} rx="6" fill="#3f8cff" />}
-                <text x={cx(i)} y="922" textAnchor="middle" fontFamily={FONT} fontSize="26" fontWeight="600" fill={RAIN}>
-                  {precip}%
-                </text>
-              </g>
-            );
-          })}
-        </>
-      )}
-
-      <Band station={station} market={market} />
-    </>
-  );
-}
-
-const PERIODS = [
-  { name: 'Morning', hour: 8, color: '#ffb347' },
-  { name: 'Afternoon', hour: 14, color: '#ffd24d' },
-  { name: 'Evening', hour: 20, color: '#8fa8ff' },
-];
-
-/** Day planner: the next morning, afternoon and evening, side by side. */
-function PlannerGraphic({ f, station, market, stamp, hours }: TemplateProps & { hours: GraphicHour[] }) {
-  const gap = 24;
-  const cardW = (W - SAFE_X * 2 - gap * 2) / 3;
-  return (
-    <>
-      <Ground />
-      <Header stamp={stamp} />
-      <Tag x={SAFE_X} y={236} text={f.kicker || 'Day Planner'} />
-      <Title>{market}</Title>
-
-      {hours.length === 0 ? (
-        <Empty>Loading the hourly forecast</Empty>
-      ) : (
-        PERIODS.map((period, i) => {
-          const hour = hours.find((h) => h.hour === period.hour);
-          const x = SAFE_X + i * (cardW + gap);
-          return (
-            <g key={period.name}>
-              <Card x={x} y={400} w={cardW} h={540} accent={period.color} />
-              <text x={x + 40} y="486" fontFamily={FONT} fontSize="48" fontWeight="800" fill="#ffffff">
-                {period.name}
-              </text>
-              <text x={x + cardW - 40} y="484" textAnchor="end" fontFamily={FONT} fontSize="30" fontWeight="600" fill={DIM}>
-                {hour ? `${hour.dayLabel} · ${hour.label}` : ''}
-              </text>
-              <g transform={`translate(${x + cardW / 2 - 90} 516)`}>
-                <WeatherIcon name={hour?.icon ?? 'cloudy'} size={180} animated={false} />
-              </g>
-              <text x={x + cardW / 2} y="810" textAnchor="middle" fontFamily={FONT} fontSize="140" fontWeight="800" letterSpacing="-6" fill="#ffffff">
-                {hour ? formatTemp(hour.temp) : '--'}
-              </text>
-              <text x={x + cardW / 2} y="866" textAnchor="middle" fontFamily={FONT} fontSize="34" fontWeight="600" fill={SOFT}>
-                {(hour?.condition ?? '').slice(0, 26)}
-              </text>
-              <text x={x + cardW / 2} y="912" textAnchor="middle" fontFamily={FONT} fontSize="30" fontWeight="600" fill={RAIN}>
-                {hour ? `${hour.precip ?? 0}% rain` : ''}
-              </text>
-            </g>
-          );
-        })
-      )}
-
-      <Band station={station} market={market} />
-    </>
-  );
-}
-
-function SevenDayGraphic({ f, station, market, stamp, days }: TemplateProps & { days: GraphicDay[] }) {
-  const list = days.slice(0, 7);
-  const gap = 20;
-  const colW = (W - SAFE_X * 2 - gap * 6) / 7;
-  return (
-    <>
-      <Ground />
-      <Header stamp={stamp} />
-      <Tag x={SAFE_X} y={236} text={f.kicker || '7-Day Forecast'} />
-      <Title>{market}</Title>
-
-      {list.length === 0 && <Empty>Loading the forecast</Empty>}
-      {list.map((day, i) => {
-        const x = SAFE_X + i * (colW + gap);
-        return (
-          <g key={day.date || i}>
-            <Card x={x} y={410} w={colW} h={520} highlight={i === 0} />
-            <text x={x + colW / 2} y="482" textAnchor="middle" fontFamily={FONT} fontSize="40" fontWeight="800" fill="#ffffff">
-              {i === 0 ? 'Today' : formatDayName(day.date, 'short')}
-            </text>
-            <g transform={`translate(${x + colW / 2 - 66} 514)`}>
-              <WeatherIcon name={day.icon} size={132} animated={false} />
-            </g>
-            <text x={x + colW / 2} y="746" textAnchor="middle" fontFamily={FONT} fontSize="100" fontWeight="800" letterSpacing="-3" fill="#ffffff">
-              {formatTemp(day.high)}
-            </text>
-            <text x={x + colW / 2} y="816" textAnchor="middle" fontFamily={FONT} fontSize="56" fontWeight="600" fill="#9fb8da">
-              {formatTemp(day.low)}
-            </text>
-            <text x={x + colW / 2} y="882" textAnchor="middle" fontFamily={FONT} fontSize="30" fontWeight="600" fill={RAIN}>
-              {day.precipProbability ?? 0}% rain
-            </text>
-          </g>
-        );
-      })}
-
-      <Band station={station} market={market} />
-    </>
-  );
 }
 
 /* ---------------------------------------------------- area temperature map */
@@ -1024,121 +750,6 @@ function AreaTempsGraphic({ f, station, market, stamp, places, lite }: TemplateP
       })}
 
       <Tag x={SAFE_X + 30} y={MAP.y + 30} text={tag} />
-      <Band station={station} market={market} />
-    </>
-  );
-}
-
-/* -------------------------------------------------------- severe outlook */
-
-const SPC_SCALE = ['#66a366', '#ffe066', '#ffa366', '#e06666', '#ee99ee'];
-
-function SevereGraphic({ f, station, market, stamp, outlooks }: TemplateProps & { outlooks: GraphicOutlook[] }) {
-  const gap = 24;
-  const cardW = (W - SAFE_X * 2 - gap * 2) / 3;
-  const dayName = (i: number) =>
-    i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : formatDayName(new Date(Date.now() + 2 * 86400000).toISOString(), 'long');
-
-  return (
-    <>
-      <Ground />
-      <Header stamp={stamp} />
-      <Tag x={SAFE_X} y={236} text={f.kicker || 'Severe Weather Outlook'} color={ALERT_RED} />
-      <Title>{market}</Title>
-      {f.detail && (
-        <text x={W - SAFE_X} y="354" textAnchor="end" fontFamily={FONT} fontSize="34" fontWeight="600" fill={SOFT}>
-          {f.detail.slice(0, 60)}
-        </text>
-      )}
-
-      {[0, 1, 2].map((i) => {
-        const outlook = outlooks[i] ?? { day: `day${i + 1}`, label: 'Outlook unavailable', level: -1, color: '#3a4656' };
-        const level = outlook.level;
-        const color = level >= 0 ? outlook.color : '#3a4656';
-        const x = SAFE_X + i * (cardW + gap);
-        const cx = x + cardW / 2;
-        const segW = (cardW - 80 - 4 * 10) / 5;
-        const label = level < 0 && outlook.label === 'Outlook unavailable' ? outlook.label : level < 0 ? 'No Severe Risk' : outlook.label;
-        return (
-          <g key={outlook.day}>
-            <Card x={x} y={400} w={cardW} h={540} accent={color} />
-            <text x={x + 40} y="486" fontFamily={FONT} fontSize="48" fontWeight="800" fill="#ffffff">
-              {dayName(i)}
-            </text>
-            <text x={x + cardW - 40} y="484" textAnchor="end" fontFamily={FONT} fontSize="30" fontWeight="600" fill={DIM}>
-              Day {i + 1}
-            </text>
-            <circle cx={cx} cy="640" r="104" fill={level >= 1 ? color : '#12294f'} stroke={color} strokeWidth="8" />
-            <text x={cx} y="684" textAnchor="middle" fontFamily={FONT} fontSize="124" fontWeight="800" fill={level >= 1 ? inkFor(color) : '#9fb8da'}>
-              {level >= 1 ? level : '0'}
-            </text>
-            <text x={cx} y="810" textAnchor="middle" fontFamily={FONT} fontSize={label.length > 18 ? 36 : 46} fontWeight="800" fill="#ffffff">
-              {label.slice(0, 28)}
-            </text>
-            {SPC_SCALE.map((segment, s) => (
-              <rect key={segment} x={x + 40 + s * (segW + 10)} y="842" width={segW} height="16" rx="8" fill={s < level ? segment : '#1a3358'} />
-            ))}
-            <text x={cx} y="906" textAnchor="middle" fontFamily={FONT} fontSize="28" fontWeight="600" fill="#9fb8da">
-              {level >= 1 ? `Level ${level} of 5` : level === 0 ? 'Thunderstorms possible' : 'Quiet for severe weather'}
-            </text>
-          </g>
-        );
-      })}
-
-      <Band station={station} market={market} />
-    </>
-  );
-}
-
-/* ------------------------------------------------------------ headlines */
-
-function HeadlinesGraphic({ f, station, market, stamp }: TemplateProps) {
-  const lines = [f.line1, f.line2, f.line3].map((line) => (line ?? '').trim());
-  return (
-    <>
-      <Ground />
-      <Header stamp={stamp} />
-      <Tag x={SAFE_X} y={236} text={f.kicker || 'Weather Headlines'} />
-      <Title muted={!f.headline}>{(f.headline || 'Your headline here').slice(0, 48)}</Title>
-
-      {lines.map((line, i) => {
-        const y = 410 + i * 172;
-        return (
-          <g key={i}>
-            <Card x={SAFE_X} y={y} w={W - SAFE_X * 2} h={148} />
-            <circle cx={SAFE_X + 78} cy={y + 74} r="46" fill={ACCENT} />
-            <text x={SAFE_X + 78} y={y + 92} textAnchor="middle" fontFamily={FONT} fontSize="50" fontWeight="800" fill="#ffffff">
-              {i + 1}
-            </text>
-            <text x={SAFE_X + 156} y={y + 92} fontFamily={FONT} fontSize="50" fontWeight="700" fill={line ? '#ffffff' : '#5f7ea8'}>
-              {(line || `Point ${i + 1}`).slice(0, 62)}
-            </text>
-          </g>
-        );
-      })}
-
-      <Band station={station} market={market} />
-    </>
-  );
-}
-
-function QuoteGraphic({ f, station, market, stamp }: TemplateProps) {
-  const lines = wrap(f.detail || '', 60, 6);
-  const bottom = 500 + Math.max(lines.length - 1, 0) * 66 + 16;
-  return (
-    <>
-      <Ground />
-      <Header stamp={stamp} />
-      <Tag x={SAFE_X} y={236} text={f.kicker || 'Forecast'} />
-      <rect x={SAFE_X} y="336" width="10" height={bottom - 336} rx="5" fill={ACCENT} />
-      <text x={SAFE_X + 40} y="410" fontFamily={FONT} fontSize="88" fontWeight="800" letterSpacing="-1" fill={f.headline ? '#ffffff' : '#5f7ea8'}>
-        {(f.headline || 'Your headline here').slice(0, 38)}
-      </text>
-      {lines.map((text, i) => (
-        <text key={i} x={SAFE_X + 40} y={500 + i * 66} fontFamily={FONT} fontSize="46" fontWeight="500" fill={SOFT}>
-          {text}
-        </text>
-      ))}
       <Band station={station} market={market} />
     </>
   );
@@ -1550,63 +1161,6 @@ function HeatField({
 }
 
 
-/* ------------------------------------------------------- weather alert day */
-
-/**
- * The day-ahead heads-up. Two lines, both in caps, over a low sun: a viewer
- * should take it in at a glance from across a room.
- */
-function WeatherDayGraphic({ f, station, market, stamp }: TemplateProps) {
-  const id = useGid();
-  const banner = (f.kicker || 'Weather Alert Day').toUpperCase().slice(0, 22);
-  const when = (f.when || 'Today through Saturday').toUpperCase();
-  const what = wrap((f.what || 'Extreme heat and high humidity').toUpperCase(), 24, 2);
-
-  return (
-    <>
-      <Scene kind={f.scene} />
-      <rect x="80" y="96" width="1030" height="790" fill="#08152e" fillOpacity="0.78" />
-
-      <g filter={`url(#${id('shadow')})`}>
-        <rect x="120" y="140" width="880" height="200" fill="#ffffff" />
-        <text x="154" y="208" fontFamily={FONT} fontSize="30" fontWeight="800" letterSpacing="3" fill="#0b1420">
-          {station.toUpperCase().slice(0, 22)}
-        </text>
-        <text
-          x="154"
-          y="300"
-          fontFamily={FONT}
-          fontSize={banner.length > 14 ? 58 : 70}
-          fontWeight="800"
-          letterSpacing="-1"
-          fill={ALERT_RED}
-        >
-          {banner}
-        </text>
-        {/* The tile breaks the top edge, the way a station numeral does. */}
-        <Tile x={858} y={112} w={152} h={184} fontSize={118} />
-      </g>
-
-      <text x="154" y="486" fontFamily={FONT} fontSize="54" fontWeight="800" letterSpacing="1" fill="#ffffff">
-        WHEN: {when.slice(0, 26)}
-      </text>
-      <text x="154" y="640" fontFamily={FONT} fontSize="54" fontWeight="800" letterSpacing="1" fill="#ffffff">
-        WHAT: {what[0]}
-      </text>
-      {what[1] && (
-        <text x="154" y="712" fontFamily={FONT} fontSize="54" fontWeight="800" letterSpacing="1" fill="#ffffff">
-          {what[1]}
-        </text>
-      )}
-
-      <text x={W - 130} y="130" textAnchor="end" fontFamily={FONT} fontSize="30" fontWeight="600" fill="#ffe7c8">
-        {stamp}
-      </text>
-      <Band station={station} market={market} />
-    </>
-  );
-}
-
 /* ------------------------------------------------------------- map plate */
 
 /**
@@ -1717,61 +1271,6 @@ function HeatIndexGraphic({ f, station, market, stamp, places, lite }: TemplateP
     </>
   );
 }
-/* ------------------------------------------------------------- comparison */
-
-/** Forecast highs against what the air will feel like: the pair is the story. */
-function CompareGraphic({ f, station, market, stamp, days }: TemplateProps & { days: GraphicDay[] }) {
-  const list = days.slice(0, 4).filter((day) => day.high !== null);
-  const peak = Math.max(...list.flatMap((day) => [day.high ?? 0, day.feelsHigh ?? day.high ?? 0]), 1);
-  const panel = { x: 150, y: 286, w: 1620, h: 640 };
-  const base = panel.y + panel.h - 96;
-  const top = panel.y + 150;
-  const colW = list.length ? (panel.w - 80) / list.length : 0;
-  const barW = 124;
-  const height = (value: number | null) => Math.max(((value ?? 0) / peak) * (base - top), 4);
-
-  return (
-    <>
-      <Scene kind={f.scene} />
-      <rect x={panel.x} y={panel.y} width={panel.w} height={panel.h} fill="#20100a" fillOpacity="0.74" />
-      <line x1={panel.x + 40} x2={panel.x + panel.w - 40} y1={panel.y + 92} y2={panel.y + 92} stroke="#ffffff" strokeOpacity="0.35" strokeWidth="2" />
-      <line x1={panel.x + 40} x2={panel.x + panel.w - 40} y1={base} y2={base} stroke="#ffffff" strokeOpacity="0.35" strokeWidth="2" />
-
-      <text x={panel.x + panel.w / 2} y={panel.y + 66} textAnchor="middle" fontFamily={FONT} fontSize="46" fontWeight="800" letterSpacing="1">
-        <tspan fill="#e8b04a">FORECAST HIGHS</tspan>
-        <tspan fill="#ffffff"> vs. </tspan>
-        <tspan fill="#ef4a3c">FEELS LIKE</tspan>
-      </text>
-
-      {list.length === 0 && <Empty>Loading the forecast</Empty>}
-      {list.map((day, i) => {
-        const centre = panel.x + 40 + colW * (i + 0.5);
-        const feels = day.feelsHigh ?? day.high;
-        const highH = height(day.high);
-        const feelsH = height(feels);
-        return (
-          <g key={day.date || i}>
-            <rect x={centre - barW - 10} y={base - highH} width={barW} height={highH} fill="#d99a34" />
-            <text x={centre - barW / 2 - 10} y={base - highH - 24} textAnchor="middle" fontFamily={FONT} fontSize="60" fontWeight="800" fill="#f4efe6">
-              {formatTemp(day.high)}
-            </text>
-            <rect x={centre + 10} y={base - feelsH} width={barW} height={feelsH} fill={ALERT_RED} />
-            <text x={centre + barW / 2 + 10} y={base - feelsH - 24} textAnchor="middle" fontFamily={FONT} fontSize="60" fontWeight="800" fill="#f4efe6">
-              {formatTemp(feels)}
-            </text>
-            <text x={centre} y={base + 64} textAnchor="middle" fontFamily={FONT} fontSize="46" fontWeight="800" letterSpacing="2" fill="#ffffff">
-              {(i === 0 ? 'Today' : formatDayName(day.date, 'short')).toUpperCase()}
-            </text>
-          </g>
-        );
-      })}
-
-      <StationBar title={f.kicker || 'Heat Index Forecast'} subtitle={f.detail || market} stamp={stamp} />
-      <Band station={station} market={market} />
-    </>
-  );
-}
-
 /* --------------------------------------------------------------- alert map */
 
 function AlertMapGraphic({
@@ -1991,6 +1490,505 @@ function SpcGraphic({
   );
 }
 
+/* --------------------------------------------------------- station chrome */
+
+/**
+ * The header every full-screen graphic wears: the station block, then a red
+ * plate carrying the title under a thin gold rule. It is the loudest thing in
+ * the top of frame, which is what makes a graphic read from across a room.
+ */
+function AlertHeader({ title, stamp }: { title: string; stamp?: string }) {
+  const id = useGid();
+  return (
+    <g filter={`url(#${id('shadow')})`}>
+      <defs>
+        <linearGradient id={id('plate')} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#c8151b" />
+          <stop offset="62%" stopColor="#9d1014" />
+          <stop offset="100%" stopColor="#5f0a0d" />
+        </linearGradient>
+        <linearGradient id={id('rule')} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#e9c75a" />
+          <stop offset="45%" stopColor="#fff6da" />
+          <stop offset="100%" stopColor="#fff6da" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id={id('block')} x1="0" y1="0" x2="0.4" y2="1">
+          <stop offset="0%" stopColor="#7a1c17" />
+          <stop offset="100%" stopColor="#3d0c0a" />
+        </linearGradient>
+      </defs>
+
+      <rect x="40" y="24" width="252" height="104" fill={`url(#${id('block')})`} />
+      <Tile x={58} y={44} w={86} h={64} fontSize={46} />
+      <text x="160" y="78" fontFamily={FONT} fontSize="26" fontWeight="800" fill="#ffffff">
+        STORM 12
+      </text>
+      <text x="160" y="108" fontFamily={FONT} fontSize="19" fontWeight="600" letterSpacing="4" fill="#e7b9b6">
+        WEATHER
+      </text>
+
+      <rect x="306" y="26" width="1574" height="7" fill={`url(#${id('rule')})`} />
+      <rect x="306" y="33" width="1574" height="86" fill={`url(#${id('plate')})`} />
+      <text x="342" y="94" fontFamily={FONT} fontSize="54" fontWeight="800" letterSpacing="0.5" fill="#ffffff">
+        {title.toUpperCase().slice(0, 34)}
+      </text>
+      {stamp && (
+        <text x="1852" y="90" textAnchor="end" fontFamily={FONT} fontSize="28" fontWeight="600" fill="#f0c9c7">
+          {stamp}
+        </text>
+      )}
+    </g>
+  );
+}
+
+/** The red plate the readings sit on. */
+function RedPanel({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
+  const id = useGid();
+  return (
+    <>
+      <defs>
+        <linearGradient id={id('panel-red')} x1="0" y1="0" x2="0.45" y2="1">
+          <stop offset="0%" stopColor="#d61c1c" />
+          <stop offset="55%" stopColor="#b01313" />
+          <stop offset="100%" stopColor="#7d0c0c" />
+        </linearGradient>
+      </defs>
+      <rect x={x} y={y} width={w} height={h} fill={`url(#${id('panel-red')})`} />
+    </>
+  );
+}
+
+/** A heading with the hairline rules a station puts above and below it. */
+function PanelHeading({ x, y, w, text: label }: { x: number; y: number; w: number; text: string }) {
+  return (
+    <>
+      <text x={x + w / 2} y={y} textAnchor="middle" fontFamily={FONT} fontSize="54" fontWeight="800" letterSpacing="2" fill="#f3dede">
+        {label.toUpperCase().slice(0, 18)}
+      </text>
+      <rect x={x + 30} y={y + 22} width={w - 60} height="4" fill="#ffffff" fillOpacity="0.45" />
+    </>
+  );
+}
+
+const Rule = ({ x, y, w }: { x: number; y: number; w: number }) => (
+  <rect x={x} y={y} width={w} height="4" fill="#ffffff" fillOpacity="0.45" />
+);
+
+/** Which days a two-panel outlook should show. */
+function pickPair(days: GraphicDay[], mode: string): GraphicDay[] {
+  if (mode === 'weekend') {
+    const weekend = days.filter((day) => {
+      const at = parseDay(day.date);
+      return at ? at.getDay() === 6 || at.getDay() === 0 : false;
+    });
+    if (weekend.length >= 2) return weekend.slice(0, 2);
+  }
+  return days.slice(0, 2);
+}
+
+/** A forecast date is a plain YYYY-MM-DD; read it as local, not as UTC. */
+function parseDay(date: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(date ?? '');
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+/* ------------------------------------------------------- two-panel outlook */
+
+function TwoPanelGraphic({ f, station, market, stamp, days }: TemplateProps & { days: GraphicDay[] }) {
+  const pair = pickPair(days, f.span ?? 'next');
+  const panels = [
+    { day: pair[0], label: f.labelA, note: f.noteA, x: 60 },
+    { day: pair[1], label: f.labelB, note: f.noteB, x: 980 },
+  ];
+
+  return (
+    <>
+      <Scene kind={f.scene} />
+      <AlertHeader title={f.kicker || (f.span === 'weekend' ? 'Weekend Forecast' : 'Your Forecast')} stamp={stamp} />
+
+      {days.length < 2 && <Empty>Loading the forecast</Empty>}
+      {panels.map(({ day, label, note, x }) => {
+        if (!day) return null;
+        const heading = label || formatDayName(day.date, 'long');
+        const lines = wrap(note ?? '', 22, 2);
+        return (
+          <g key={x}>
+            <RedPanel x={x} y={176} w={880} h={744} />
+            <PanelHeading x={x} y={258} w={880} text={heading} />
+            <g transform={`translate(${x + 70} 330)`}>
+              <WeatherIcon name={day.icon} size={300} animated={false} />
+            </g>
+            <text x={x + 830} y={790} textAnchor="end" fontFamily={FONT} fontSize="190" fontWeight="800" letterSpacing="-6" fill="#ffffff">
+              {day.high === null ? '--' : Math.round(day.high)}
+            </text>
+            <Rule x={x + 30} y={826} w={820} />
+            {lines.map((line, k) => (
+              <text key={k} x={x + 40} y={886 + k * 54} fontFamily={FONT} fontSize="44" fontWeight="800" letterSpacing="1" fill="#ffffff">
+                {line.toUpperCase()}
+              </text>
+            ))}
+          </g>
+        );
+      })}
+
+      <Band station={station} market={market} />
+    </>
+  );
+}
+
+/* ------------------------------------------------------------ hour strip */
+
+function HourStripGraphic({ f, station, market, stamp, hours }: TemplateProps & { hours: GraphicHour[] }) {
+  const list = hours.slice(0, 7);
+  const gap = 16;
+  const colW = (1800 - gap * 6) / 7;
+
+  return (
+    <>
+      <Scene kind={f.scene} />
+      <AlertHeader title={f.kicker || 'Hour by Hour Forecast'} stamp={stamp} />
+
+      {list.length === 0 && <Empty>Loading the hourly forecast</Empty>}
+      {list.map((hour, i) => {
+        const x = 60 + i * (colW + gap);
+        return (
+          <g key={hour.time || i}>
+            <RedPanel x={x} y={176} w={colW} h={744} />
+            <PanelHeading x={x} y={248} w={colW} text={i === 0 ? 'Now' : hour.label.replace(' ', '')} />
+            <g transform={`translate(${x + colW / 2 - 75} 310)`}>
+              <WeatherIcon name={hour.icon} size={150} animated={false} />
+            </g>
+            <text x={x + colW / 2} y={790} textAnchor="middle" fontFamily={FONT} fontSize="112" fontWeight="800" letterSpacing="-4" fill="#ffffff">
+              {hour.temp === null ? '--' : Math.round(hour.temp)}
+            </text>
+            <Rule x={x + 24} y={830} w={colW - 48} />
+          </g>
+        );
+      })}
+
+      <Band station={station} market={market} />
+    </>
+  );
+}
+
+/* --------------------------------------------------------- rain chance */
+
+/** Rain chance rises through yellow to red, the way a station ramps it. */
+function chanceColor(value: number): string {
+  if (value >= 80) return '#c81414';
+  if (value >= 60) return '#e2681a';
+  if (value >= 40) return '#eab308';
+  return '#b9a13a';
+}
+
+function RainTimingGraphic({ f, station, market, stamp, hours }: TemplateProps & { hours: GraphicHour[] }) {
+  // Every second hour: five columns covering ten hours reads better on air
+  // than ten columns nobody can take in.
+  const list = hours.filter((_, i) => i % 2 === 0).slice(0, 5);
+  const panel = { x: 60, y: 176, w: 1800, h: 744 };
+  const colW = panel.w / Math.max(list.length, 1);
+  const base = 830;
+  const top = 320;
+
+  return (
+    <>
+      <Scene kind={f.scene ?? 'storm'} />
+      <AlertHeader title={f.kicker || 'Rain Chance Timing'} stamp={stamp} />
+      <rect x={panel.x} y={panel.y} width={panel.w} height={panel.h} fill="#0b1c2a" fillOpacity="0.55" />
+
+      {[100, 75, 50, 25].map((mark) => {
+        const y = base - (mark / 100) * (base - top);
+        return (
+          <g key={mark}>
+            <rect x={panel.x + 100} y={y} width={panel.w - 140} height="2" fill="#ffffff" fillOpacity="0.16" />
+            <text x={panel.x + 26} y={y + 12} fontFamily={FONT} fontSize="30" fontWeight="700" fill="#9fb4c8">
+              {mark}%
+            </text>
+          </g>
+        );
+      })}
+      <rect x={panel.x + 26} y={base} width={panel.w - 52} height="3" fill="#ffffff" fillOpacity="0.5" />
+
+      {list.length === 0 && <Empty>Loading the hourly forecast</Empty>}
+      {list.map((hour, i) => {
+        const chance = Math.max(0, Math.min(100, hour.precip ?? 0));
+        // A dry hour keeps a stub, so five zero columns read as a dry stretch
+        // rather than a graphic that failed to draw.
+        const height = Math.max((chance / 100) * (base - top), 10);
+        const centre = panel.x + colW * (i + 0.5);
+        return (
+          <g key={hour.time || i}>
+            <rect x={centre - 130} y={top} width="260" height={base - top} fill="#ffffff" fillOpacity="0.07" />
+            <rect x={centre - 130} y={base - height} width="260" height={height} fill={chanceColor(chance)} />
+            <text x={centre} y={base - height - 26} textAnchor="middle" fontFamily={FONT} fontSize="66" fontWeight="800" fill="#ffffff">
+              {chance}%
+            </text>
+            <text x={centre} y={base + 66} textAnchor="middle" fontFamily={FONT} fontSize="56" fontWeight="800" letterSpacing="1" fill="#ffffff">
+              {(i === 0 ? 'Now' : hour.label).replace(' ', '').toUpperCase()}
+            </text>
+          </g>
+        );
+      })}
+
+      <Band station={station} market={market} />
+    </>
+  );
+}
+
+/* ------------------------------------------------------- three periods */
+
+function ThreePeriodGraphic({
+  f,
+  station,
+  market,
+  stamp,
+  days,
+  hours,
+}: TemplateProps & { days: GraphicDay[]; hours: GraphicHour[] }) {
+  const today = days[0];
+  const tomorrow = days[1];
+  const tonight = hours.find((hour) => hour.hour >= 22) ?? hours[hours.length - 1];
+
+  const columns = [
+    { label: f.labelA || 'Afternoon', value: today?.high ?? null, icon: today?.icon ?? 'cloudy' },
+    { label: f.labelB || 'Tonight', value: today?.low ?? tonight?.temp ?? null, icon: tonight?.icon ?? 'clear-night' },
+    {
+      label: f.labelC || (tomorrow ? formatDayName(tomorrow.date, 'long') : 'Tomorrow'),
+      value: tomorrow?.high ?? null,
+      icon: tomorrow?.icon ?? 'cloudy',
+    },
+  ];
+  const panel = { x: 60, y: 176, w: 1800, h: 700 };
+  const colW = panel.w / 3;
+
+  return (
+    <>
+      <Scene kind={f.scene ?? 'storm'} />
+      <AlertHeader title={f.kicker || 'Forecast'} stamp={stamp} />
+      <RedPanel x={panel.x} y={panel.y} w={panel.w} h={panel.h} />
+
+      {days.length === 0 && <Empty>Loading the forecast</Empty>}
+      {columns.map((column, i) => {
+        const x = panel.x + colW * i;
+        return (
+          <g key={column.label}>
+            <PanelHeading x={x} y={260} w={colW} text={column.label} />
+            <g transform={`translate(${x + colW / 2 - 110} 320)`}>
+              <WeatherIcon name={column.icon} size={220} animated={false} />
+            </g>
+            <text x={x + colW / 2} y={790} textAnchor="middle" fontFamily={FONT} fontSize="150" fontWeight="800" letterSpacing="-5" fill="#ffffff">
+              {column.value === null ? '--' : Math.round(column.value)}
+            </text>
+            {i < 2 && <rect x={x + colW - 2} y={panel.y + 60} width="3" height={panel.h - 120} fill="#ffffff" fillOpacity="0.28" />}
+          </g>
+        );
+      })}
+
+      <Band station={station} market={market} />
+    </>
+  );
+}
+
+/* ------------------------------------------------------------- records */
+
+function RecordsGraphic({ f, station, market, stamp, days }: TemplateProps & { days: GraphicDay[] }) {
+  const high = f.high || (days[0]?.high === null || days[0] === undefined ? '--' : String(Math.round(days[0].high as number)));
+  // Normals and records come from no free feed, so a field left blank drops its
+  // row instead of putting a dash on air.
+  const normal = (f.normal ?? '').trim();
+  const record = (f.record ?? '').trim();
+  const year = (f.year ?? '').trim();
+  const foot = Boolean(record || year);
+  // One number does not need the full slab, so the panel narrows to what is on it.
+  const width = normal ? 1520 : 940;
+  const height = foot ? 640 : 420;
+  // Whatever the panel ends up holding, it sits centred in the clear area.
+  const panel = { x: (1920 - width) / 2, y: 176 + (744 - height) / 2, w: width, h: height };
+  const half = panel.w / 2;
+  const date = f.date || new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  return (
+    <>
+      <Scene kind={f.scene ?? 'storm'} />
+      <AlertHeader title={f.kicker || "Today's Records"} stamp={stamp} />
+      <text x={panel.x} y={panel.y - 34} fontFamily={FONT} fontSize="40" fontWeight="800" letterSpacing="3" fill="#dbe6f4">
+        {date.toUpperCase()}
+      </text>
+
+      <RedPanel x={panel.x} y={panel.y} w={panel.w} h={panel.h} />
+
+      <text
+        x={normal ? panel.x + half / 2 : panel.x + half}
+        y={panel.y + 106}
+        textAnchor="middle"
+        fontFamily={FONT}
+        fontSize="72"
+        fontWeight="800"
+        letterSpacing="2"
+        fill="#f3dede"
+      >
+        HIGH
+      </text>
+      <text
+        x={normal ? panel.x + half / 2 : panel.x + half}
+        y={panel.y + 300}
+        textAnchor="middle"
+        fontFamily={FONT}
+        fontSize="200"
+        fontWeight="800"
+        letterSpacing="-6"
+        fill="#ffffff"
+      >
+        {high}°
+      </text>
+
+      {normal !== '' && (
+        <>
+          <rect x={panel.x + half - 2} y={panel.y + 56} width="3" height="320" fill="#ffffff" fillOpacity="0.35" />
+          <text x={panel.x + half + half / 2} y={panel.y + 106} textAnchor="middle" fontFamily={FONT} fontSize="72" fontWeight="800" letterSpacing="2" fill="#f3dede">
+            NORMAL
+          </text>
+          <text x={panel.x + half + half / 2} y={panel.y + 300} textAnchor="middle" fontFamily={FONT} fontSize="200" fontWeight="800" letterSpacing="-6" fill="#ffffff">
+            {normal}°
+          </text>
+        </>
+      )}
+
+      {foot && (
+        <>
+          <Rule x={panel.x + 40} y={panel.y + 380} w={panel.w - 80} />
+          <text x={panel.x + 60} y={panel.y + 490} fontFamily={FONT} fontSize="60" fontWeight="800" letterSpacing="2" fill="#f3dede">
+            RECORD HIGH
+          </text>
+          <text x={panel.x + 560} y={panel.y + 490} fontFamily={FONT} fontSize="60" fontWeight="800" fill="#ffffff">
+            {record || '--'}°
+          </text>
+          {year !== '' && (
+            <>
+              <text x={panel.x + 60} y={panel.y + 580} fontFamily={FONT} fontSize="52" fontWeight="800" letterSpacing="2" fill="#f3dede">
+                SET IN
+              </text>
+              <text x={panel.x + 320} y={panel.y + 580} fontFamily={FONT} fontSize="52" fontWeight="800" fill="#ffffff">
+                {year}
+              </text>
+            </>
+          )}
+        </>
+      )}
+
+      <Band station={station} market={market} />
+    </>
+  );
+}
+
+/* ------------------------------------------------------------ activity */
+
+/** Lawn mowing, car washing, the game tonight: three days, one question. */
+function ActivityGraphic({ f, station, market, stamp, days }: TemplateProps & { days: GraphicDay[] }) {
+  const list = days.slice(0, 3);
+  const table = { x: 470, y: 300, w: 1000, rowH: 116, gap: 12 };
+
+  return (
+    <>
+      <Scene kind={f.scene ?? 'sunset'} />
+      <AlertHeader title={f.kicker || 'Lawn Mowing Forecast'} stamp={stamp} />
+
+      {list.length === 0 && <Empty>Loading the forecast</Empty>}
+      <rect
+        x={table.x - 16}
+        y={table.y - 16}
+        width={table.w + 32}
+        height={list.length * (table.rowH + table.gap) + 20}
+        fill="#ffffff"
+        fillOpacity="0.92"
+      />
+      {list.map((day, i) => {
+        const y = table.y + i * (table.rowH + table.gap);
+        // The middle row is the one a viewer is being pointed at.
+        const accent = i === 1;
+        return (
+          <g key={day.date || i}>
+            {accent ? (
+              <RedPanel x={table.x} y={y} w={table.w} h={table.rowH} />
+            ) : (
+              <rect x={table.x} y={y} width={table.w} height={table.rowH} fill="#ffffff" />
+            )}
+            <text
+              x={table.x + 32}
+              y={y + 76}
+              fontFamily={FONT}
+              fontSize="52"
+              fontWeight="800"
+              letterSpacing="1"
+              fill={accent ? '#ffffff' : '#12233a'}
+            >
+              {(i === 0 ? 'Today' : formatDayName(day.date, 'long')).toUpperCase()}
+            </text>
+            <g transform={`translate(${table.x + 560} ${y + 16})`}>
+              <WeatherIcon name={day.icon} size={84} animated={false} />
+            </g>
+            <text
+              x={table.x + table.w - 32}
+              y={y + 80}
+              textAnchor="end"
+              fontFamily={FONT}
+              fontSize="66"
+              fontWeight="800"
+              fill={accent ? '#ffffff' : '#1d4f9c'}
+            >
+              {day.high === null ? '--' : Math.round(day.high)}°
+            </text>
+          </g>
+        );
+      })}
+
+      <Band station={station} market={market} />
+    </>
+  );
+}
+
+/* --------------------------------------------------------- weather kids */
+
+function KidsGraphic({ f, station, market, stamp, days }: TemplateProps & { days: GraphicDay[] }) {
+  const today = days[0];
+  const note = wrap(f.message || 'Thanks for sending us your weather picture!', 30, 3);
+
+  return (
+    <>
+      <Scene kind={f.scene ?? 'storm'} />
+      <AlertHeader title={f.kicker || 'Weather Kids'} stamp={stamp} />
+
+      <RedPanel x={60} y={176} w={660} h={744} />
+      <PanelHeading x={60} y={258} w={660} text={f.labelA || 'Today'} />
+      <g transform="translate(150 340)">
+        <WeatherIcon name={today?.icon ?? 'cloudy'} size={240} animated={false} />
+      </g>
+      <text x={670} y={800} textAnchor="end" fontFamily={FONT} fontSize="190" fontWeight="800" letterSpacing="-6" fill="#ffffff">
+        {today?.high === null || today === undefined ? '--' : Math.round(today.high as number)}
+      </text>
+      <Rule x={90} y={836} w={600} />
+
+      <RedPanel x={760} y={176} w={1100} h={744} />
+      <PanelHeading x={760} y={258} w={1100} text={f.labelB || 'Our Weather Kid'} />
+      <text x={1310} y={470} textAnchor="middle" fontFamily={FONT} fontSize="104" fontWeight="800" fill="#ffffff">
+        {(f.name || 'Name here').slice(0, 22)}
+      </text>
+      <text x={1310} y={548} textAnchor="middle" fontFamily={FONT} fontSize="52" fontWeight="600" fill="#f3dede">
+        {(f.town || 'Town here').slice(0, 30)}
+      </text>
+      <Rule x={820} y={608} w={980} />
+      {note.map((line, i) => (
+        <text key={i} x={1310} y={700 + i * 66} textAnchor="middle" fontFamily={FONT} fontSize="48" fontWeight="600" fill="#ffffff">
+          {line}
+        </text>
+      ))}
+
+      <Band station={station} market={market} />
+    </>
+  );
+}
+
 /* ---------------------------------------------------------------- frame */
 
 interface GraphicSvgProps {
@@ -2011,41 +2009,35 @@ export function GraphicSvg({ data, svgRef, className, label, lite, decorative }:
 
   let body;
   switch (data.template) {
-    case 'hourly':
-      body = <HourlyGraphic {...props} hours={data.hours ?? []} />;
+    case 'hourstrip':
+      body = <HourStripGraphic {...props} hours={data.hours ?? []} />;
       break;
-    case 'planner':
-      body = <PlannerGraphic {...props} hours={data.hours ?? []} />;
+    case 'raintiming':
+      body = <RainTimingGraphic {...props} hours={data.hours ?? []} />;
       break;
-    case 'sevenday':
-      body = <SevenDayGraphic {...props} days={data.days} />;
+    case 'threeperiod':
+      body = <ThreePeriodGraphic {...props} days={data.days} hours={data.hours ?? []} />;
+      break;
+    case 'records':
+      body = <RecordsGraphic {...props} days={data.days} />;
+      break;
+    case 'activity':
+      body = <ActivityGraphic {...props} days={data.days} />;
+      break;
+    case 'kids':
+      body = <KidsGraphic {...props} days={data.days} />;
       break;
     case 'areatemps':
       body = <AreaTempsGraphic {...props} places={data.places ?? []} lite={lite} />;
       break;
-    case 'severe':
-      body = <SevereGraphic {...props} outlooks={data.outlooks ?? []} />;
-      break;
-    case 'weatherday':
-      body = <WeatherDayGraphic {...props} />;
-      break;
     case 'heatindex':
       body = <HeatIndexGraphic {...props} places={data.places ?? []} lite={lite} />;
-      break;
-    case 'compare':
-      body = <CompareGraphic {...props} days={data.days} />;
       break;
     case 'alertmap':
       body = <AlertMapGraphic {...props} places={data.places ?? []} areas={data.areas ?? []} lite={lite} />;
       break;
     case 'spcmap':
       body = <SpcGraphic {...props} places={data.places ?? []} outlook={data.outlook ?? []} lite={lite} />;
-      break;
-    case 'headlines':
-      body = <HeadlinesGraphic {...props} />;
-      break;
-    case 'quote':
-      body = <QuoteGraphic {...props} />;
       break;
     case 'alert':
       body = <AlertGraphic {...props} />;
@@ -2057,7 +2049,7 @@ export function GraphicSvg({ data, svgRef, className, label, lite, decorative }:
       body = <BugGraphic {...props} icon={data.icon} />;
       break;
     default:
-      body = <ConditionsGraphic {...props} icon={data.icon} />;
+      body = <TwoPanelGraphic {...props} days={data.days} />;
   }
 
   return (

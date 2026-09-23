@@ -34,13 +34,16 @@ export const NEXRAD_PRODUCTS = {
     description: 'Super-resolution 0.5° base reflectivity, straight off the WSR-88D.',
     palette: 'reflectivity',
   },
-  N0U: {
-    id: 'N0U',
-    name: 'Base Velocity',
-    short: 'VEL',
+  // Storm-relative velocity rather than base velocity: the bucket carries
+  // N0S for this network, while N0U and N0V are simply never published, so
+  // the old entry offered viewers a product that could only ever 404.
+  N0S: {
+    id: 'N0S',
+    name: 'Storm Relative Velocity',
+    short: 'SRV',
     units: 'kt',
     rangeKm: 300,
-    description: 'Super-resolution 0.5° radial velocity. Green is inbound, red outbound.',
+    description: 'Storm-relative 0.5° velocity. Green is inbound, red outbound; rotation shows as a tight green-red couplet.',
     palette: 'velocity',
   },
   N0C: {
