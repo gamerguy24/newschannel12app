@@ -292,7 +292,8 @@ router.get('/config', (req, res) => {
       sponsor: config.sponsor.name ? config.sponsor : null,
       features: {
         lightning: Boolean(config.lightning.tileUrl || config.lightning.geojsonUrl),
-        stormRelativeVelocity: Boolean(config.radar.srvWmsUrl),
+        // SRV is decoded here from the Level III feed, so it needs no licence.
+        stormRelativeVelocity: true,
         liveStream: Boolean(config.liveStream.url),
       },
       sources: [

@@ -70,12 +70,6 @@ function read() {
       tileUrl: str('LIGHTNING_TILE_URL'),
       geojsonUrl: str('LIGHTNING_GEOJSON_URL'),
     },
-    radar: {
-      // Storm-relative velocity has no key-free public NOAA tile service.
-      // Point this at a station-licensed WMS to light the SRV product up.
-      srvWmsUrl: str('SRV_WMS_URL'),
-      srvWmsLayer: str('SRV_WMS_LAYER'),
-    },
     sponsor: {
       name: str('SPONSOR_NAME'),
       tagline: str('SPONSOR_TAGLINE'),

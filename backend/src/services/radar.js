@@ -157,20 +157,6 @@ export function getRadarProducts({ site = config.defaultRadarSite } = {}) {
       available: true,
     },
     {
-      id: 'srv',
-      name: 'Storm Relative Velocity',
-      short: 'SRV',
-      scope: 'site',
-      animated: false,
-      type: 'wms',
-      units: 'kt',
-      wms: config.radar?.srvWmsUrl ? { url: config.radar.srvWmsUrl, layer: config.radar.srvWmsLayer, version: '1.1.1', format: 'image/png', transparent: true } : null,
-      description:
-        'Radial velocity with storm motion removed. No key-free public NOAA service publishes SRV tiles; set SRV_WMS_URL to your station feed to enable.',
-      available: Boolean(config.radar?.srvWmsUrl),
-      unavailableReason: 'No public SRV tile service. Configure SRV_WMS_URL to enable this product.',
-    },
-    {
       id: 'precip-type',
       name: 'Precipitation Type',
       short: 'PTYPE',

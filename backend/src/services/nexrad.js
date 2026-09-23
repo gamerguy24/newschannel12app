@@ -34,15 +34,16 @@ export const NEXRAD_PRODUCTS = {
     description: 'Super-resolution 0.5° base reflectivity, straight off the WSR-88D.',
     palette: 'reflectivity',
   },
-  // Storm-relative velocity rather than base velocity: the bucket carries
-  // N0S for this network, while N0U and N0V are simply never published, so
-  // the old entry offered viewers a product that could only ever 404.
+  // Storm-relative velocity rather than base velocity. KOHX has not published
+  // N0U or N0V in years, so the old entry offered viewers a product that could
+  // only ever 404; N0S arrives with every scan. It is a 16-level legacy
+  // product, which is why the parser learned the older symbology packet.
   N0S: {
     id: 'N0S',
     name: 'Storm Relative Velocity',
     short: 'SRV',
     units: 'kt',
-    rangeKm: 300,
+    rangeKm: 230,
     description: 'Storm-relative 0.5° velocity. Green is inbound, red outbound; rotation shows as a tight green-red couplet.',
     palette: 'velocity',
   },
@@ -110,9 +111,35 @@ export async function latestKey(site, product = 'N0B') {
  * Read one Level III product.
  *
  * Layout: a WMO text header, an 18-byte message header, a 102-byte product
- * description block, then a bzip2-compressed product symbology block holding
- * a packet-16 "digital radial data array" - one byte per gate, 720 radials.
+ * description block, then a bzip2-compressed product symbology block.
+ *
+ * Two symbology packets appear in the products worth putting on air. The
+ * dual-pol and super-resolution products carry packet 16, a "digital radial
+ * data array" of one byte per gate. The older 16-level products - storm
+ * relative velocity among them - carry packet AF1F, where each radial is
+ * run-length coded into nibble pairs and the sixteen levels mean whatever the
+ * product's own threshold table says they mean.
  */
+/**
+ * The sixteen data levels of a legacy product, in the product's own units.
+ *
+ * Each threshold halfword carries a magnitude in its low byte and flags in its
+ * high byte: 0x80 marks a coded level with no number behind it (below
+ * threshold, range folded), and the low bits carry the sign, so a velocity
+ * product reads as -64 kt through 0 to +64 kt. A coded level comes back NaN,
+ * which is how the rest of the pipeline knows to draw nothing there.
+ */
+function thresholdLevels(buffer, pdb) {
+  const levels = new Float32Array(16);
+  for (let i = 0; i < 16; i += 1) {
+    const raw = buffer.readUInt16BE(pdb + (31 + i - 10) * 2);
+    const flags = raw >> 8;
+    const magnitude = raw & 0xff;
+    levels[i] = flags & 0x80 ? NaN : (flags & 0x01 ? -magnitude : magnitude);
+  }
+  return levels;
+}
+
 export function parseLevel3(buffer) {
   // The text header ends at the second CR CR LF.
   const marker = Buffer.from([0x0d, 0x0d, 0x0a]);
@@ -156,11 +183,15 @@ export function parseLevel3(buffer) {
   }
 
   let p = 16;
-  const packetCode = symbology.readInt16BE(p);
-  if (packetCode !== 16) throw new Error(`Unsupported symbology packet ${packetCode}`);
+  const packetCode = symbology.readUInt16BE(p);
+  if (packetCode !== 16 && packetCode !== 0xaf1f) {
+    throw new Error(`Unsupported symbology packet 0x${packetCode.toString(16)}`);
+  }
 
   const firstBin = symbology.readInt16BE(p + 2);
   const binCount = symbology.readInt16BE(p + 4);
+  // Packet AF1F states its own gate size, in thousandths of a kilometre.
+  const gateKm = packetCode === 0xaf1f ? symbology.readInt16BE(p + 10) / 1000 : null;
   const radialCount = symbology.readInt16BE(p + 12);
   p += 14;
 
@@ -169,12 +200,28 @@ export function parseLevel3(buffer) {
   const gates = new Uint8Array(radialCount * binCount);
 
   for (let r = 0; r < radialCount; r += 1) {
-    const byteCount = symbology.readInt16BE(p);
+    const size = symbology.readInt16BE(p);
     azimuths[r] = symbology.readInt16BE(p + 2) / 10;
     widths[r] = symbology.readInt16BE(p + 4) / 10;
     p += 6;
-    gates.set(symbology.subarray(p, p + Math.min(byteCount, binCount)), r * binCount);
-    p += byteCount;
+
+    if (packetCode === 16) {
+      gates.set(symbology.subarray(p, p + Math.min(size, binCount)), r * binCount);
+      p += size;
+    } else {
+      // Run length coded: the size is in halfwords, and each byte is a run
+      // length in its high nibble and a data level in its low nibble.
+      const end = p + size * 2;
+      let bin = 0;
+      for (let at = p; at < end && bin < binCount; at += 1) {
+        const byte = symbology[at];
+        const level = byte & 0x0f;
+        const run = Math.min(byte >> 4, binCount - bin);
+        gates.fill(level, r * binCount + bin, r * binCount + bin + run);
+        bin += run;
+      }
+      p = end;
+    }
   }
 
   return {
@@ -186,6 +233,9 @@ export function parseLevel3(buffer) {
     minimum,
     increment,
     levelCount,
+    // A legacy product's levels are a lookup rather than a straight line.
+    levels: packetCode === 0xaf1f ? thresholdLevels(buffer, pdb) : null,
+    gateKm,
     firstBin,
     binCount,
     radialCount,
@@ -214,7 +264,7 @@ function despeckle(sweep, minNeighbours = 3) {
 
     for (let g = 0; g < binCount; g += 1) {
       const at = r * binCount + g;
-      if (gates[at] < 2) continue;
+      if (!hasReading(sweep, gates[at])) continue;
 
       let neighbours = 0;
       for (const rr of [rPrev, r, rNext]) {
@@ -222,7 +272,7 @@ function despeckle(sweep, minNeighbours = 3) {
           const gg = g + dg;
           if (gg < 0 || gg >= binCount) continue;
           if (rr === r && dg === 0) continue;
-          if (gates[rr * binCount + gg] >= 2) neighbours += 1;
+          if (hasReading(sweep, gates[rr * binCount + gg])) neighbours += 1;
         }
       }
 
@@ -234,7 +284,18 @@ function despeckle(sweep, minNeighbours = 3) {
 }
 
 /** Turn a stored level into the product's real units. */
-export const levelToValue = (sweep, level) => sweep.minimum + (level - 2) * sweep.increment;
+export const levelToValue = (sweep, level) =>
+  sweep.levels ? sweep.levels[level] : sweep.minimum + (level - 2) * sweep.increment;
+
+/**
+ * Is there a reading at this level, or is it one of the codes?
+ *
+ * A digital product reserves 0 and 1 for below-threshold and range-folded. A
+ * legacy product says so in its threshold table instead, and it matters: level
+ * 1 of a velocity product is 64 knots inbound, not empty sky.
+ */
+const hasReading = (sweep, level) =>
+  sweep.levels ? level < 16 && Number.isFinite(sweep.levels[level]) : level >= 2;
 
 /* --------------------------------------------------------------- palettes */
 
@@ -270,9 +331,9 @@ function buildLookup(sweep, paletteName) {
   const table = new Uint8Array(256 * 4);
 
   for (let level = 0; level < 256; level += 1) {
-    // 0 is "below threshold" and 1 is "range folded": both draw as nothing,
-    // which is what keeps a clear day transparent instead of a blue wash.
-    if (level < 2) continue;
+    // Below threshold and range folded draw as nothing, which is what keeps a
+    // clear day transparent instead of a blue wash.
+    if (!hasReading(sweep, level)) continue;
 
     const value = levelToValue(sweep, level);
     if (value < stops[0][0]) continue;
@@ -314,8 +375,8 @@ const inverseMercatorY = (y) => ((2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 18
  * the radar, and read straight out of the polar array.
  */
 export function rasterise(sweep, { size = 1000, palette = 'reflectivity', rangeKm } = {}) {
-  const reach = rangeKm ?? (sweep.binCount * 0.25);
-  const gateKm = reach / sweep.binCount;
+  const gateKm = sweep.gateKm || (rangeKm ?? sweep.binCount * 0.25) / sweep.binCount;
+  const reach = gateKm * sweep.binCount;
 
   const latSpan = (reach / R_EARTH_KM) * (180 / Math.PI);
   const north = Math.min(85, sweep.latitude + latSpan);
@@ -369,8 +430,6 @@ export function rasterise(sweep, { size = 1000, palette = 'reflectivity', rangeK
       radial = ((radial % sweep.radialCount) + sweep.radialCount) % sweep.radialCount;
 
       const level = sweep.gates[radial * sweep.binCount + gate];
-      if (level < 2) continue;
-
       const at = level * 4;
       if (lookup[at + 3] === 0) continue;
 
