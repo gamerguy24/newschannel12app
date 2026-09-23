@@ -418,10 +418,17 @@ export function saveGraphic(entry) {
   const name = text(entry?.name, 80);
   if (!name) return { ok: false, errors: ['Name this graphic so the newsroom can find it again.'] };
 
+  // Taking to air checks the template; saving has to check it too, or a
+  // rundown built before a template was retired keeps a dead item in it.
+  const template = text(entry?.template, 40);
+  if (template && !PROGRAM_TEMPLATES.includes(template)) {
+    return { ok: false, errors: ['That graphic template does not exist.'] };
+  }
+
   const record = {
     id: entry?.id || `gfx-${crypto.randomUUID()}`,
     name,
-    template: text(entry?.template, 40) || 'conditions',
+    template: template || PROGRAM_TEMPLATES[0],
     fields: typeof entry?.fields === 'object' && entry.fields ? entry.fields : {},
     updatedAt: new Date().toISOString(),
   };

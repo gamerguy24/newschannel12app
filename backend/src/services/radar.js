@@ -133,18 +133,6 @@ export function getRadarProducts({ site = config.defaultRadarSite } = {}) {
       available: true,
     },
     {
-      id: 'reflectivity',
-      name: 'Base Reflectivity',
-      short: 'REFL',
-      scope: 'site',
-      animated: false,
-      type: 'wms',
-      units: 'dBZ',
-      wms: wms(s, `${s}_sr_bref`),
-      description: 'Super-resolution 0.5° base reflectivity from the selected radar.',
-      available: true,
-    },
-    {
       id: 'velocity',
       name: 'Base Velocity',
       short: 'VEL',

@@ -10,7 +10,11 @@ import { request } from '../lib/http.js';
  * every WSR-88D Level III product to a public S3 bucket within seconds of the
  * volume scan completing, with no credentials and no API key.
  *
+ *   arn:aws:s3:::unidata-nexrad-level3   (us-east-1, no credentials)
  *   s3://unidata-nexrad-level3  ->  https://unidata-nexrad-level3.s3.amazonaws.com
+ *
+ * The HTTPS form is the same anonymous read as `aws s3 --no-sign-request`:
+ * the bucket is public, so nothing here signs a request or holds a key.
  *
  * Keys are flat and sorted: SITE_PRODUCT_YYYY_MM_DD_HH_MM_SS, where SITE is
  * the three-letter id (KOHX is filed as OHX). Because the list is
