@@ -6,7 +6,7 @@ import { getOutlook, getOutlookSummary, getStormReports } from '../services/spc.
 import { getNearbyStations, getStationsInBounds } from '../services/metar.js';
 import { getRadarStations } from '../services/nws.js';
 import { getActiveStorms, getStormTrack, getTropicalImagery, getTropicalOutlook } from '../services/nhc.js';
-import { NEXRAD_PRODUCTS, getSweepImage } from '../services/nexrad.js';
+import { NEXRAD_PRODUCTS, TILE_SIZE, getSweepImage, getSweepTile, loadSweep } from '../services/nexrad.js';
 import { getBroadcastPlaces, getCountyBoundaries } from '../services/broadcastMap.js';
 
 const router = Router();
@@ -118,8 +118,39 @@ router.get(
 );
 
 /**
- * Metadata for the newest sweep: where to place the image and when it was
- * taken. The client needs the bounds before it can position the overlay.
+ * One map tile of the newest sweep, painted for the zoom being looked at.
+ *
+ * The scan key rides along in the query string, so a tile URL names exactly
+ * one scan and can be cached hard: when the radar turns out a new volume the
+ * key changes, the URLs change with it, and nothing stale is reused.
+ */
+router.get(
+  '/radar/nexrad/:site/:product/:z/:x/:y.png',
+  asyncRoute(async (req, res) => {
+    const product = String(req.params.product).toUpperCase();
+    if (!NEXRAD_PRODUCTS[product]) throw new HttpError(404, `Unknown NEXRAD product ${product}`);
+
+    const z = Number(req.params.z);
+    const x = Number(req.params.x);
+    const y = Number(req.params.y);
+    const span = 2 ** z;
+    const whole = (n) => Number.isInteger(n);
+    if (!whole(z) || z < 0 || z > 16 || !whole(x) || !whole(y) || x < 0 || y < 0 || x >= span || y >= span) {
+      throw new HttpError(400, 'That is not a tile coordinate.');
+    }
+
+    const tile = await getSweepTile(req.params.site, product, z, x, y);
+    res
+      .set('Content-Type', 'image/png')
+      .set('Cache-Control', 'public, max-age=600, immutable')
+      .set('X-Scan-Time', tile.timestamp)
+      .send(tile.png);
+  }),
+);
+
+/**
+ * Metadata for the newest sweep: where to place it, when it was taken, and
+ * the tile template to read it through.
  */
 router.get(
   '/radar/nexrad/:site/:product',
@@ -128,19 +159,21 @@ router.get(
     if (!NEXRAD_PRODUCTS[product.toUpperCase()]) {
       throw new HttpError(404, `Unknown NEXRAD product ${product}`);
     }
-    const sweep = await getSweepImage(site, product.toUpperCase());
+    const sweep = await loadSweep(site, product.toUpperCase());
     // Short cache: a WSR-88D turns out a new volume scan every 4-6 minutes.
     cacheFor(res, 60).json(
       envelope({
         site: sweep.site,
-        product: sweep.product,
-        productName: sweep.productName,
-        units: sweep.units,
+        product: sweep.product.id,
+        productName: sweep.product.name,
+        units: sweep.product.units,
         elevationAngle: sweep.elevationAngle,
         timestamp: sweep.timestamp,
         bounds: sweep.bounds,
         radar: { lat: sweep.radarLat, lon: sweep.radarLon },
-        imageUrl: `/api/radar/nexrad/${sweep.site}/${sweep.product}.png`,
+        imageUrl: `/api/radar/nexrad/${sweep.site}/${sweep.product.id}.png`,
+        tileUrl: `/api/radar/nexrad/${sweep.site}/${sweep.product.id}/{z}/{x}/{y}.png?k=${encodeURIComponent(sweep.key)}`,
+        tileSize: TILE_SIZE,
         key: sweep.key,
         source: sweep.source,
       }),

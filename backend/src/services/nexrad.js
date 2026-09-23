@@ -393,19 +393,28 @@ const inverseMercatorY = (y) => ((2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 18
  * has to carry a reading at all - otherwise echoes would bleed outward into
  * clear sky by half a gate everywhere along their edge.
  */
-export function rasterise(sweep, { size = 2048, palette = 'reflectivity', rangeKm } = {}) {
+export function sweepExtent(sweep, rangeKm) {
   const gateKm = sweep.gateKm || (rangeKm ?? sweep.binCount * 0.25) / sweep.binCount;
   const reach = gateKm * sweep.binCount;
-
   const latSpan = (reach / R_EARTH_KM) * (180 / Math.PI);
-  const north = Math.min(85, sweep.latitude + latSpan);
-  const south = Math.max(-85, sweep.latitude - latSpan);
   const lonSpan = latSpan / Math.cos((sweep.latitude * Math.PI) / 180);
-  const west = sweep.longitude - lonSpan;
-  const east = sweep.longitude + lonSpan;
 
-  const yTop = mercatorY(north);
-  const yBottom = mercatorY(south);
+  return {
+    gateKm,
+    reach,
+    north: Math.min(85, sweep.latitude + latSpan),
+    south: Math.max(-85, sweep.latitude - latSpan),
+    west: sweep.longitude - lonSpan,
+    east: sweep.longitude + lonSpan,
+  };
+}
+
+/**
+ * Paint one projected box. The box is given in Mercator y and plain longitude
+ * because that is what both callers already have: the whole sweep works from
+ * its own extent, a map tile from its z/x/y.
+ */
+function paint(sweep, { palette, gateKm, reach, west, east, yTop, yBottom, width, height }) {
   const ramp = buildRamp(palette);
   const rampScale = (ramp.steps - 1) / (ramp.max - ramp.min);
 
@@ -418,7 +427,7 @@ export function rasterise(sweep, { size = 2048, palette = 'reflectivity', rangeK
     levelValue[level] = levelToValue(sweep, level);
   }
 
-  const rgba = Buffer.alloc(size * size * 4);
+  const rgba = Buffer.alloc(width * height * 4);
   const latRad = (sweep.latitude * Math.PI) / 180;
   const cosLat0 = Math.cos(latRad);
   const sinLat0 = Math.sin(latRad);
@@ -429,15 +438,15 @@ export function rasterise(sweep, { size = 2048, palette = 'reflectivity', rangeK
   const radialStep = 360 / radialCount;
   const azimuthStart = sweep.azimuths[0];
 
-  for (let py = 0; py < size; py += 1) {
-    const y = yTop + ((yBottom - yTop) * (py + 0.5)) / size;
+  for (let py = 0; py < height; py += 1) {
+    const y = yTop + ((yBottom - yTop) * (py + 0.5)) / height;
     const lat = inverseMercatorY(y);
     const latR = (lat * Math.PI) / 180;
     const sinLat = Math.sin(latR);
     const cosLat = Math.cos(latR);
 
-    for (let px = 0; px < size; px += 1) {
-      const lon = west + ((east - west) * (px + 0.5)) / size;
+    for (let px = 0; px < width; px += 1) {
+      const lon = west + ((east - west) * (px + 0.5)) / width;
       const dLon = ((lon - sweep.longitude) * Math.PI) / 180;
 
       // Great-circle distance and initial bearing from the radar.
@@ -514,7 +523,7 @@ export function rasterise(sweep, { size = 2048, palette = 'reflectivity', rangeK
       const at = index * 4;
       if (ramp.table[at + 3] === 0) continue;
 
-      const out = (py * size + px) * 4;
+      const out = (py * width + px) * 4;
       rgba[out] = ramp.table[at];
       rgba[out + 1] = ramp.table[at + 1];
       rgba[out + 2] = ramp.table[at + 2];
@@ -522,7 +531,67 @@ export function rasterise(sweep, { size = 2048, palette = 'reflectivity', rangeK
     }
   }
 
-  return { rgba, size, bounds: { north, south, east, west } };
+  return rgba;
+}
+
+/** The whole sweep as one square image, the way an image overlay wants it. */
+export function rasterise(sweep, { size = 2048, palette = 'reflectivity', rangeKm } = {}) {
+  const extent = sweepExtent(sweep, rangeKm);
+  const rgba = paint(sweep, {
+    palette,
+    gateKm: extent.gateKm,
+    reach: extent.reach,
+    west: extent.west,
+    east: extent.east,
+    yTop: mercatorY(extent.north),
+    yBottom: mercatorY(extent.south),
+    width: size,
+    height: size,
+  });
+
+  return {
+    rgba,
+    size,
+    bounds: { north: extent.north, south: extent.south, east: extent.east, west: extent.west },
+  };
+}
+
+export const TILE_SIZE = 256;
+
+/**
+ * One slippy-map tile of the sweep, painted at the zoom it will be seen at.
+ *
+ * A single image of the whole sweep has one resolution for every zoom level,
+ * so it is wasteful when the map is pulled back and soft once it is pushed in.
+ * A tile is always painted for the box being looked at, so 256 pixels land
+ * wherever the viewer is: the same cost per tile at every zoom.
+ *
+ * Returns null for a tile the sweep does not reach, which the caller answers
+ * with a blank rather than painting nothing slowly.
+ */
+export function rasteriseTile(sweep, { z, x, y, palette = 'reflectivity', rangeKm, size = TILE_SIZE }) {
+  const extent = sweepExtent(sweep, rangeKm);
+  const n = 2 ** z;
+  const west = (x / n) * 360 - 180;
+  const east = ((x + 1) / n) * 360 - 180;
+  const yTop = Math.PI * (1 - (2 * y) / n);
+  const yBottom = Math.PI * (1 - (2 * (y + 1)) / n);
+
+  // The sweep covers one square of the world; a tile clear of it is blank.
+  if (east < extent.west || west > extent.east) return null;
+  if (inverseMercatorY(yBottom) > extent.north || inverseMercatorY(yTop) < extent.south) return null;
+
+  return paint(sweep, {
+    palette,
+    gateKm: extent.gateKm,
+    reach: extent.reach,
+    west,
+    east,
+    yTop,
+    yBottom,
+    width: size,
+    height: size,
+  });
 }
 
 /* ------------------------------------------------------------- PNG writer */
@@ -586,16 +655,16 @@ export function encodePng(rgba, width, height) {
 /* ------------------------------------------------------------------ public */
 
 /**
- * The newest sweep for a site, decoded and painted. Cached for two minutes:
- * the radar itself only produces a new volume scan every four to six.
+ * The newest sweep for a site, fetched and decoded. Cached for two minutes:
+ * the radar only turns out a new volume scan every four to six, and every
+ * tile of that scan reads this one decoded array rather than decoding again.
+ * Concurrent callers share the work, so a screenful of tiles arriving at once
+ * is one download and one decode, not thirty.
  */
-// 2048 across the sweep puts roughly two output pixels on every super-res
-// gate, so zooming in shows the data rather than the canvas it was drawn on.
-export async function getSweepImage(site, productId = 'N0B', { size = 2048 } = {}) {
+export async function loadSweep(site, productId = 'N0B') {
   const product = NEXRAD_PRODUCTS[productId] ?? NEXRAD_PRODUCTS.N0B;
-  const cacheKey = `nexrad:${siteKey(site)}:${product.id}:${size}`;
 
-  return withCache(cacheKey, 1000 * 120, async () => {
+  return withCache(`nexrad:sweep:${siteKey(site)}:${product.id}`, 1000 * 120, async () => {
     const key = await latestKey(site, product.id);
     if (!key) {
       const error = new Error(`No recent ${product.id} scan for ${site}`);
@@ -608,19 +677,16 @@ export async function getSweepImage(site, productId = 'N0B', { size = 2048 } = {
       retries: 1,
       accept: 'application/octet-stream',
     });
-    const buffer = Buffer.from(await response.arrayBuffer());
-    const sweep = parseLevel3(buffer);
+    const sweep = parseLevel3(Buffer.from(await response.arrayBuffer()));
     sweep.gates = despeckle(sweep);
-    const raster = rasterise(sweep, { size, palette: product.palette, rangeKm: product.rangeKm });
+    const extent = sweepExtent(sweep, product.rangeKm);
 
     return {
-      png: encodePng(raster.rgba, raster.size, raster.size),
-      bounds: raster.bounds,
+      sweep,
+      product,
       key,
       site: String(site).toUpperCase(),
-      product: product.id,
-      productName: product.name,
-      units: product.units,
+      bounds: { north: extent.north, south: extent.south, east: extent.east, west: extent.west },
       elevationAngle: sweep.elevationAngle,
       timestamp: sweep.timestamp,
       radarLat: sweep.latitude,
@@ -628,4 +694,54 @@ export async function getSweepImage(site, productId = 'N0B', { size = 2048 } = {
       source: 'NOAA NEXRAD Level III via AWS Open Data',
     };
   });
+}
+
+/**
+ * The whole sweep as one PNG. The map reads tiles now; this stays because it
+ * is the one URL that hands somebody the entire scan as a picture.
+ */
+// 2048 across the sweep puts roughly two output pixels on every super-res gate.
+export async function getSweepImage(site, productId = 'N0B', { size = 2048 } = {}) {
+  const loaded = await loadSweep(site, productId);
+  const cacheKey = `nexrad:image:${loaded.site}:${loaded.product.id}:${loaded.key}:${size}`;
+
+  const png = await withCache(cacheKey, 1000 * 120, async () => {
+    const raster = rasterise(loaded.sweep, {
+      size,
+      palette: loaded.product.palette,
+      rangeKm: loaded.product.rangeKm,
+    });
+    return encodePng(raster.rgba, raster.size, raster.size);
+  });
+
+  return { ...loaded, png, productName: loaded.product.name, units: loaded.product.units };
+}
+
+/** A tile the sweep does not reach. Built once and handed out unchanged. */
+let blankTile = null;
+
+/**
+ * One map tile of the newest sweep.
+ *
+ * Tiles are not cached: painting 256 by 256 pixels costs a few milliseconds,
+ * while keeping every tile a panning viewer asks for would grow without bound
+ * in an isolate that lives for hours. The decode above is the expensive part
+ * and that is cached; the browser and the edge keep the pictures.
+ */
+export async function getSweepTile(site, productId, z, x, y) {
+  const loaded = await loadSweep(site, productId);
+  const rgba = rasteriseTile(loaded.sweep, {
+    z,
+    x,
+    y,
+    palette: loaded.product.palette,
+    rangeKm: loaded.product.rangeKm,
+  });
+
+  if (!rgba) {
+    blankTile = blankTile ?? encodePng(Buffer.alloc(TILE_SIZE * TILE_SIZE * 4), TILE_SIZE, TILE_SIZE);
+    return { png: blankTile, key: loaded.key, timestamp: loaded.timestamp, blank: true };
+  }
+
+  return { png: encodePng(rgba, TILE_SIZE, TILE_SIZE), key: loaded.key, timestamp: loaded.timestamp, blank: false };
 }

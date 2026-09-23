@@ -368,7 +368,11 @@ export interface NexradSweep {
   timestamp: string;
   bounds: { north: number; south: number; east: number; west: number };
   radar: { lat: number; lon: number };
+  /** The whole sweep as one picture, for anyone who wants it that way. */
   imageUrl: string;
+  /** A slippy-map template, already carrying the scan key. */
+  tileUrl: string;
+  tileSize: number;
   key: string;
   source: string;
 }

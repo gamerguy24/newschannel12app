@@ -235,11 +235,19 @@ export function WeatherMapPage() {
           );
           swap(
             layer.id,
-            L.imageOverlay(`${sweep.imageUrl}?k=${encodeURIComponent(sweep.key)}`, bounds, {
+            // Painted per tile at the zoom being looked at; the template
+            // carries the scan key, so a new volume scan repaints the map.
+            L.tileLayer(sweep.tileUrl, {
               opacity: opacityFor(layer),
               pane: 'nc-radar',
               className: 'nc-radar-tiles',
-              interactive: false,
+              tileSize: sweep.tileSize,
+              bounds,
+              maxNativeZoom: 12,
+              minNativeZoom: 4,
+              updateWhenZooming: false,
+              keepBuffer: 3,
+              crossOrigin: true,
             }),
           );
         })

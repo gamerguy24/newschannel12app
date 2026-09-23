@@ -45,6 +45,13 @@ import './RadarMap.css';
  * broadcast needs stacked on top.
  */
 
+/**
+ * The deepest zoom worth painting a sweep at. A 250 m gate already covers
+ * about eight pixels here, so past this the tiles would magnify the same
+ * reading rather than reveal a new one - and the map itself stops at 12.
+ */
+const NEXRAD_MAX_ZOOM = 12;
+
 export interface RadarMapProps {
   location: LatLon & { name?: string; label?: string };
   initialSite?: string;
@@ -216,12 +223,21 @@ export function RadarMap({ location, initialSite, height = '100%', compact, focu
             [sweep.bounds.south, sweep.bounds.west],
             [sweep.bounds.north, sweep.bounds.east],
           );
-          // Cache-bust on the scan key so a new volume scan actually repaints.
-          const overlay = L.imageOverlay(`${sweep.imageUrl}?k=${encodeURIComponent(sweep.key)}`, bounds, {
+          // Tiles, not one picture: each is painted for the zoom it is seen
+          // at, so pushing in shows more data rather than a bigger pixel. The
+          // template already carries the scan key, so a new volume scan gives
+          // every tile a new URL and the map repaints itself.
+          const overlay = L.tileLayer(sweep.tileUrl, {
             opacity,
             pane: 'nc-radar',
             className: 'nc-radar-tiles',
-            interactive: false,
+            tileSize: sweep.tileSize,
+            bounds,
+            maxNativeZoom: NEXRAD_MAX_ZOOM,
+            minNativeZoom: 4,
+            updateWhenZooming: false,
+            keepBuffer: 3,
+            crossOrigin: true,
           });
           overlay.addTo(map);
           staticLayerRef.current = overlay;
