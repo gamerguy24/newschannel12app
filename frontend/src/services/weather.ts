@@ -327,7 +327,10 @@ export interface BroadcastPayload {
 }
 
 export const getBroadcast = (loc: LatLon, signal?: AbortSignal) =>
-  apiGet<BroadcastPayload>('/broadcast', point(loc), { signal });
+  // The heaviest call in the app: one payload assembled from a dozen upstream
+  // requests. The default timeout is sized for single requests and cuts this
+  // one off on a cold cache, which blanks the stage.
+  apiGet<BroadcastPayload>('/broadcast', point(loc), { signal, timeoutMs: 45000 });
 
 /* ------------------------------------------------------------------ maps */
 

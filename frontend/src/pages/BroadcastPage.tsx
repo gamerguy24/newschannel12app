@@ -45,6 +45,17 @@ export function BroadcastPage() {
     refreshMs: 60000,
   });
 
+  // A first load that fails must not sit on a red card waiting for somebody to
+  // notice and click. Once there is data a failed refresh keeps the last good
+  // payload on screen, but until then this retries on its own. Every failure
+  // hands back a new error object, so each one re-arms the timer.
+  const stalled = Boolean(broadcast.error) && !broadcast.data;
+  useEffect(() => {
+    if (!stalled) return undefined;
+    const timer = window.setTimeout(broadcast.reload, 5000);
+    return () => window.clearTimeout(timer);
+  }, [stalled, broadcast.error, broadcast.reload]);
+
   // The operator chrome fades out so the stage is clean on air.
   useEffect(() => {
     if (!chromeVisible) return undefined;
@@ -75,7 +86,7 @@ export function BroadcastPage() {
       <div className="nc-broadcast nc-broadcast--message">
         <ErrorState
           title="Broadcast feed unavailable"
-          message={broadcast.error.friendly}
+          message={`${broadcast.error.friendly} Retrying automatically.`}
           onRetry={broadcast.reload}
         />
         <Link className="nc-broadcast__exit-link" to="/">

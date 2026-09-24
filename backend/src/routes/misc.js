@@ -207,24 +207,27 @@ router.get(
   '/broadcast',
   asyncRoute(async (req, res) => {
     const location = readLocation(req);
-    const [current, hourly, daily, breaking, storms, alerts] = await Promise.allSettled([
+
+    // Every piece here is independent, so they all go out together. The ticker
+    // markets used to wait for the forecast to settle before they even started,
+    // which doubled the worst case on a cold cache for no reason - and this is
+    // the one request the whole broadcast stage waits on.
+    const tickerMarkets = config.tickerMarkets.slice(0, 8);
+    const [current, hourly, daily, breaking, storms, alerts, ...markets] = await Promise.allSettled([
       getCurrentConditions(location),
       getHourlyForecast(location, { hours: 12 }),
       getDailyForecast(location, { days: 7 }),
       getBreakingWeather(location),
       getStormTracks(location, { radiusMiles: 150 }),
       getActiveAlerts({ area: config.coverageStates }),
+      ...tickerMarkets.map(async (m) => {
+        const c = await getCurrentConditions(m);
+        return { name: m.name.toUpperCase(), temperature: c.observation.temperature, icon: c.observation.icon };
+      }),
     ]);
 
     const value = (r, fallback) => (r.status === 'fulfilled' ? r.value : fallback);
     const currentData = value(current, null);
-
-    const markets = await Promise.allSettled(
-      config.tickerMarkets.slice(0, 8).map(async (m) => {
-        const c = await getCurrentConditions(m);
-        return { name: m.name.toUpperCase(), temperature: c.observation.temperature, icon: c.observation.icon };
-      }),
-    );
 
     cacheFor(res, 60).json(
       envelope({
