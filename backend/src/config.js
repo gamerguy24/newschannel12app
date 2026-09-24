@@ -52,14 +52,16 @@ function read() {
     // The station's home NEXRAD. KOHX is Nashville (Old Hickory); every radar
     // surface falls back to it rather than to a hardcoded out-of-market site.
     defaultRadarSite: str('DEFAULT_RADAR_SITE', 'KOHX').toUpperCase(),
-    coverageStates: list('COVERAGE_STATES', ['TN', 'KY', 'AL']).map((s) => s.toUpperCase()),
-    // Which states' WSR-88D sites appear in radar pickers. Wider than the alert
-    // coverage area, because a neighbouring radar often has the better view.
-    radarStates: list('RADAR_STATES', ['TN', 'AL', 'KY', 'AR', 'NC', 'SC', 'GA']).map((s) => s.toUpperCase()),
+    // The two states this station covers. Everything that draws a boundary,
+    // lists a county or raises an alert is scoped to these.
+    coverageStates: list('COVERAGE_STATES', ['TN', 'KY']).map((s) => s.toUpperCase()),
+    // Which states' WSR-88D sites appear in radar pickers. Held to the coverage
+    // area as well: the newsroom does not put an out-of-market radar on air.
+    radarStates: list('RADAR_STATES', ['TN', 'KY']).map((s) => s.toUpperCase()),
     tickerMarkets: parseMarkets(
       str(
         'TICKER_MARKETS',
-        'Nashville:36.1627:-86.7816,Murfreesboro:35.8456:-86.3903,Franklin:35.9251:-86.8689,Clarksville:36.5298:-87.3595,Columbia:35.6151:-87.0353,Cookeville:36.1628:-85.5016,Bowling Green:36.9685:-86.4808,Huntsville:34.7304:-86.5861',
+        'Nashville:36.1627:-86.7816,Murfreesboro:35.8456:-86.3903,Franklin:35.9251:-86.8689,Clarksville:36.5298:-87.3595,Columbia:35.6151:-87.0353,Cookeville:36.1628:-85.5016,Bowling Green:36.9685:-86.4808,Hopkinsville:36.8656:-87.4912',
       ).replace(/^"|"$/g, ''),
     ),
     liveStream: {

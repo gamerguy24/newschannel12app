@@ -27,7 +27,6 @@ export const BROADCAST_PLACES = [
   { name: 'Jackson', state: 'TN', tier: 2, lat: 35.6145, lon: -88.814 },
   { name: 'Hopkinsville', state: 'KY', tier: 2, lat: 36.8656, lon: -87.4912 },
   { name: 'Bowling Green', state: 'KY', tier: 2, lat: 36.9903, lon: -86.4436 },
-  { name: 'Huntsville', state: 'AL', tier: 2, lat: 34.7304, lon: -86.5859 },
   { name: 'Knoxville', state: 'TN', tier: 2, lat: 35.9606, lon: -83.9207 },
   { name: 'Chattanooga', state: 'TN', tier: 2, lat: 35.0456, lon: -85.3097 },
   { name: 'Gallatin', state: 'TN', tier: 3, lat: 36.3884, lon: -86.4467 },
@@ -72,11 +71,16 @@ export const BROADCAST_PLACES = [
 const TIER_MIN_ZOOM = { 1: 4, 2: 6, 3: 7, 4: 8 };
 
 export function getBroadcastPlaces() {
-  return BROADCAST_PLACES.map((place) => ({ ...place, minZoom: TIER_MIN_ZOOM[place.tier] ?? 8 }));
+  // Filtered rather than trusted: the coverage area is configurable, and a town
+  // outside it has no business being labelled on this station's map.
+  return BROADCAST_PLACES.filter((place) => config.coverageStates.includes(place.state)).map((place) => ({
+    ...place,
+    minZoom: TIER_MIN_ZOOM[place.tier] ?? 8,
+  }));
 }
 
 /**
- * County outlines for the radar coverage states.
+ * County outlines for the states this station covers.
  *
  * From the Census Bureau's TIGERweb service, which is public and key-free.
  * The NWS zone endpoint looked like the obvious source, but its

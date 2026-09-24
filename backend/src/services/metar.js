@@ -1,3 +1,4 @@
+import config from '../config.js';
 import { cachedJson } from '../lib/http.js';
 import { compassPoint, distanceMiles } from '../lib/geo.js';
 
@@ -48,12 +49,27 @@ export function describeSky(clouds = []) {
   return { OVC: 'Overcast', BKN: 'Mostly Cloudy', SCT: 'Partly Cloudy', FEW: 'Mostly Clear', CLR: 'Clear', SKC: 'Clear' }[worst] ?? 'Clear';
 }
 
+/**
+ * Which state a station sits in.
+ *
+ * The Aviation Weather Center carries it in the name and nowhere else -
+ * "Smyrna Arpt, TN, US" - so that is where it has to be read from.
+ */
+function stateOf(name) {
+  const parts = String(name ?? '')
+    .split(',')
+    .map((part) => part.trim());
+  const candidate = parts.length >= 3 ? parts[parts.length - 2] : '';
+  return candidate.length === 2 ? candidate.toUpperCase() : null;
+}
+
 function normalizeMetar(m) {
   const visibility = typeof m.visib === 'string' ? Number.parseFloat(m.visib.replace('+', '')) : m.visib;
   const clouds = (m.clouds ?? []).map((c) => ({ cover: c.cover, base: c.base }));
   return {
     id: m.icaoId,
     name: m.name || m.icaoId,
+    state: stateOf(m.name),
     lat: m.lat,
     lon: m.lon,
     elevationM: m.elev,
@@ -103,7 +119,11 @@ export async function getStationsInBounds(bbox) {
   const key = `metar:bbox:${[w, s, e, n].map((v) => v.toFixed(1)).join(',')}`;
   const data = await cachedJson(key, 60 * 5, url);
   const list = Array.isArray(data) ? data : [];
-  return list.map(normalizeMetar).filter((st) => Number.isFinite(st.lat) && st.temperature !== null);
+  // A bounding box around this market reaches into four other states, so the
+  // observations are held to the coverage area the same as everything else.
+  return list
+    .map(normalizeMetar)
+    .filter((st) => Number.isFinite(st.lat) && st.temperature !== null && config.coverageStates.includes(st.state));
 }
 
 /** Observations for specific ICAO identifiers. */

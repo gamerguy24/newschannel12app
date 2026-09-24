@@ -29,22 +29,33 @@ const STATE_ABBR = {
 
 const abbr = (state) => STATE_ABBR[state] ?? (state?.length === 2 ? state.toUpperCase() : state);
 
+/**
+ * Is this somewhere the station covers?
+ *
+ * The geocoder behind the search box is global, and the ZIP lookup is national.
+ * Neither knows this is a two-state newsroom, so the answer is enforced here:
+ * a viewer searching the box only ever gets places inside the coverage area.
+ */
+const inCoverage = (state) => config.coverageStates.includes(String(abbr(state) ?? '').toUpperCase());
+
 const isZip = (q) => /^\d{5}(-\d{4})?$/.test(q.trim());
 
 async function searchZip(query) {
   const zip = query.trim().slice(0, 5);
   try {
     const data = await cachedJson(`zip:${zip}`, 60 * 60 * 24 * 30, `${ZIP_API}/${zip}`);
-    return (data?.places ?? []).map((place) => ({
-      id: `zip:${zip}`,
-      type: 'zip',
-      name: place['place name'],
-      state: place['state abbreviation'],
-      label: `${place['place name']}, ${place['state abbreviation']} ${zip}`,
-      detail: `ZIP ${zip}`,
-      lat: Number.parseFloat(place.latitude),
-      lon: Number.parseFloat(place.longitude),
-    }));
+    return (data?.places ?? [])
+      .filter((place) => inCoverage(place['state abbreviation']))
+      .map((place) => ({
+        id: `zip:${zip}`,
+        type: 'zip',
+        name: place['place name'],
+        state: place['state abbreviation'],
+        label: `${place['place name']}, ${place['state abbreviation']} ${zip}`,
+        detail: `ZIP ${zip}`,
+        lat: Number.parseFloat(place.latitude),
+        lon: Number.parseFloat(place.longitude),
+      }));
   } catch {
     return [];
   }
@@ -55,8 +66,8 @@ async function searchPlace(query, limit = 8) {
   try {
     const data = await cachedJson(`place:${query.toLowerCase()}`, 60 * 60 * 24, `${PLACE_API}?${params}`);
     const results = data?.results ?? [];
-    // The geocoder is global; a US local-news app ranks domestic hits first.
     const scored = results
+      .filter((r) => r.country_code === 'US' && inCoverage(r.admin1))
       .map((r) => ({
         id: `place:${r.id}`,
         type: 'city',
@@ -64,17 +75,13 @@ async function searchPlace(query, limit = 8) {
         state: r.country_code === 'US' ? abbr(r.admin1) : r.admin1,
         country: r.country_code,
         county: r.admin2 ?? null,
-        label:
-          r.country_code === 'US'
-            ? `${r.name}, ${abbr(r.admin1) ?? ''}`.trim().replace(/,$/, '')
-            : `${r.name}, ${r.country ?? r.country_code}`,
-        detail: r.admin2 ? `${r.admin2}${r.country_code === 'US' ? ' County' : ''}` : r.country,
+        label: `${r.name}, ${abbr(r.admin1) ?? ''}`.trim().replace(/,$/, ''),
+        detail: r.admin2 ? `${r.admin2} County` : null,
         population: r.population ?? 0,
         lat: r.latitude,
         lon: r.longitude,
-        domestic: r.country_code === 'US',
       }))
-      .sort((a, b) => Number(b.domestic) - Number(a.domestic) || b.population - a.population);
+      .sort((a, b) => b.population - a.population);
     return scored.slice(0, limit);
   } catch {
     return [];
