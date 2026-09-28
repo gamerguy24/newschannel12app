@@ -680,3 +680,56 @@
   .nc-admin__nav-item.is-active { border-left-color: transparent; border-bottom-color: var(--nc-cyan); }
   .nc-admin__main { padding: var(--space-4); }
 }
+
+/* ------------------------------------------------------------ video panel */
+
+.nc-video-admin__pending {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background: var(--nc-navy-900);
+  border: 1px solid var(--nc-line);
+  border-radius: var(--radius-sm);
+}
+
+.nc-video-admin__thumb {
+  width: 140px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: #000;
+  flex: none;
+}
+
+.nc-video-admin__thumb--blank {
+  background: linear-gradient(135deg, #16273c, #0d1826);
+  border: 1px dashed var(--nc-line);
+}
+
+.nc-video-admin__progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  color: var(--nc-text-dim);
+}
+
+.nc-video-admin__bar {
+  flex: 1;
+  height: 8px;
+  background: var(--nc-navy-900);
+  border: 1px solid var(--nc-line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.nc-video-admin__bar span {
+  display: block;
+  height: 100%;
+  background: var(--nc-cyan);
+  transition: width 160ms linear;
+}

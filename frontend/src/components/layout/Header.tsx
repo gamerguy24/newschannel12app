@@ -22,6 +22,7 @@ export const NAV_ITEMS = [
   { to: '/stations', label: 'Stations' },
   { to: '/tropics', label: 'Tropics' },
   { to: '/discussion', label: 'Discussion' },
+  { to: '/video', label: 'Video' },
   { to: '/news', label: 'News' },
   { to: '/closings', label: 'Closings' },
 ];

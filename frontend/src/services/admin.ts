@@ -10,6 +10,7 @@ import type {
   SchoolClosing,
   StationAlert,
   StationGraphic,
+  StationVideo,
 } from '../api/types';
 
 /**
@@ -153,3 +154,109 @@ export async function getClosings(signal?: AbortSignal): Promise<ClosingsFeed> {
   if (!res.ok) throw new ApiError('Closings are unavailable right now.', res.status);
   return (await res.json()).data as ClosingsFeed;
 }
+
+/* ----------------------------------------------------------------- video */
+
+/**
+ * Raw bytes to the newsroom.
+ *
+ * The JSON helper labels every body it sends as JSON, and the router on the
+ * other end reads a JSON body up front - which would consume a video slice
+ * before the handler ever saw it. So binary goes out through its own door.
+ */
+async function adminSend<T>(path: string, body: BodyInit, contentType: string, method = 'PUT'): Promise<T> {
+  const token = readToken();
+  const res = await fetch(`${BASE}/admin${path}`, {
+    method,
+    body,
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': contentType,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    cache: 'no-store',
+  });
+
+  const text = await res.text();
+  let parsed: unknown = null;
+  try {
+    parsed = text ? JSON.parse(text) : null;
+  } catch {
+    throw new ApiError('The admin API returned an unreadable response.', res.status || 502);
+  }
+
+  if (!res.ok) {
+    if (res.status === 401) writeToken(null);
+    throw new ApiError((parsed as { error?: string })?.error ?? `Upload failed (${res.status})`, res.status);
+  }
+
+  const envelope = parsed as Envelope<T>;
+  return envelope && typeof envelope === 'object' && 'data' in envelope ? envelope.data : (parsed as T);
+}
+
+export interface UploadProgress {
+  sent: number;
+  total: number;
+  ratio: number;
+}
+
+/**
+ * Put a video in the library.
+ *
+ * Open, send the slices, close. The slicing is not an optimisation - a Worker
+ * will not accept a request body much past 100 MB, so a whole broadcast
+ * cannot arrive in one piece. It also means the operator watches a real
+ * progress bar rather than a spinner.
+ *
+ * Anything that goes wrong aborts the upload, so a half-written file is not
+ * left sitting in the bucket being billed for.
+ */
+export async function uploadVideo(
+  file: File,
+  meta: { title: string; description?: string; durationSeconds?: number | null },
+  onProgress?: (progress: UploadProgress) => void,
+): Promise<StationVideo> {
+  const { key, uploadId, partSize } = await adminFetch<{ key: string; uploadId: string; partSize: number }>(
+    '/videos/uploads',
+    { method: 'POST', body: JSON.stringify({ contentType: file.type, size: file.size }) },
+  );
+
+  try {
+    const parts: Array<{ partNumber: number; etag: string }> = [];
+    let sent = 0;
+    let partNumber = 1;
+
+    for (let offset = 0; offset < file.size; offset += partSize) {
+      const slice = file.slice(offset, Math.min(offset + partSize, file.size));
+      parts.push(
+        await adminSend<{ partNumber: number; etag: string }>(
+          `/videos/uploads/${uploadId}/parts/${partNumber}?key=${encodeURIComponent(key)}`,
+          slice,
+          'application/octet-stream',
+        ),
+      );
+      sent += slice.size;
+      onProgress?.({ sent, total: file.size, ratio: file.size ? sent / file.size : 1 });
+      partNumber += 1;
+    }
+
+    const { video } = await adminFetch<{ video: StationVideo }>(`/videos/uploads/${uploadId}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({ key, parts, contentType: file.type, ...meta }),
+    });
+    return video;
+  } catch (err) {
+    await adminFetch(`/videos/uploads/${uploadId}?key=${encodeURIComponent(key)}`, { method: 'DELETE' }).catch(
+      () => undefined,
+    );
+    throw err;
+  }
+}
+
+export const attachVideoPoster = (id: string, poster: Blob) =>
+  adminSend<{ video: StationVideo }>(`/videos/${id}/poster`, poster, 'image/jpeg');
+
+export const updateVideo = (id: string, patch: { title?: string; description?: string }) =>
+  adminFetch<{ video: StationVideo }>(`/videos/${id}`, { method: 'PUT', body: JSON.stringify(patch) });
+
+export const deleteVideo = (id: string) => adminFetch<{ ok: true }>(`/videos/${id}`, { method: 'DELETE' });

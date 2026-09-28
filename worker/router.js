@@ -224,7 +224,12 @@ export async function dispatch(mounts, request, url, context = {}) {
 
       let body;
       if (request.method !== 'GET' && request.method !== 'HEAD') {
-        body = await request.json().catch(() => ({}));
+        // Only a JSON body is read here, the way express.json() decides. A
+        // binary body - a slice of video on its way to R2 - has to reach the
+        // handler unread: consuming the stream now would leave it nothing to
+        // store, and `req.raw` would throw on a second read.
+        const type = request.headers.get('content-type') ?? '';
+        body = type.includes('application/json') ? await request.json().catch(() => ({})) : {};
       }
 
       const listeners = {};

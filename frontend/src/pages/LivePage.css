@@ -230,3 +230,11 @@
   text-transform: uppercase;
 }
 .nc-live__offair-links a:hover { border-color: var(--nc-cyan); }
+
+/* The newest recorded clip, below the live stage. */
+.nc-live__latest {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  display: block;
+}

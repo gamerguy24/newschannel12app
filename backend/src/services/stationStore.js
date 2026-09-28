@@ -32,6 +32,8 @@ const EMPTY = {
   graphics: [],
   /** The graphic on program, frozen at the moment it was taken. */
   program: null,
+  /** The video library. The files live in R2; only the card lives here. */
+  videos: [],
 };
 
 let state = structuredClone(EMPTY);
@@ -448,6 +450,96 @@ export function deleteGraphic(id) {
 }
 
 export const getGraphics = () => state.graphics;
+
+/* ----------------------------------------------------------------- video */
+
+/**
+ * A clip in the library.
+ *
+ * The file itself is in R2 and is never touched here - this is the card that
+ * describes it: what it is called, where its bytes are, and when it went up.
+ * The two keys are written by the upload route once the object is complete,
+ * so a record here always points at something that exists.
+ */
+export function saveVideo(entry) {
+  const title = text(entry?.title, 120);
+  if (!title) return { ok: false, errors: ['Give the video a title so the newsroom can find it.'] };
+
+  const key = text(entry?.key, 200);
+  if (!key) return { ok: false, errors: ['A video record needs the key of its stored file.'] };
+
+  const existing = state.videos.find((v) => v.id === entry?.id);
+  const record = {
+    id: entry?.id || `vid-${crypto.randomUUID()}`,
+    title,
+    description: text(entry?.description, 600),
+    key,
+    posterKey: text(entry?.posterKey, 200) || existing?.posterKey || null,
+    contentType: text(entry?.contentType, 80) || 'video/mp4',
+    size: Number.isFinite(Number(entry?.size)) ? Math.max(0, Math.round(Number(entry.size))) : 0,
+    durationSeconds: Number.isFinite(Number(entry?.durationSeconds))
+      ? Math.max(0, Math.round(Number(entry.durationSeconds)))
+      : null,
+    publishedAt: existing?.publishedAt ?? new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const at = state.videos.findIndex((v) => v.id === record.id);
+  if (at >= 0) state.videos[at] = record;
+  else state.videos.unshift(record);
+
+  commit();
+  return { ok: true, video: record };
+}
+
+/**
+ * Rename or re-describe a clip without touching its bytes.
+ *
+ * The merge happens in here rather than in the route because the route reads
+ * a snapshot that can be a couple of seconds old; the Durable Object holds
+ * the only copy that is certainly current.
+ */
+export function updateVideo(id, patch) {
+  const video = state.videos.find((v) => v.id === id);
+  if (!video) return { ok: false, errors: ['That video is not in the library.'] };
+
+  if (patch?.title !== undefined) {
+    const title = text(patch.title, 120);
+    if (!title) return { ok: false, errors: ['A video needs a title.'] };
+    video.title = title;
+  }
+  if (patch?.description !== undefined) video.description = text(patch.description, 600);
+  video.updatedAt = new Date().toISOString();
+
+  commit();
+  return { ok: true, video };
+}
+
+/** Point a clip at its poster frame, handing back the one it replaces. */
+export function attachPoster(id, key) {
+  const video = state.videos.find((v) => v.id === id);
+  if (!video) return { ok: false, errors: ['That video is not in the library.'] };
+
+  const previousPosterKey = video.posterKey ?? null;
+  video.posterKey = text(key, 200) || null;
+  video.updatedAt = new Date().toISOString();
+
+  commit();
+  return { ok: true, video, previousPosterKey };
+}
+
+export function deleteVideo(id) {
+  const record = state.videos.find((v) => v.id === id) ?? null;
+  state.videos = state.videos.filter((v) => v.id !== id);
+  commit();
+  // The caller needs the keys back: the card is gone from the newsroom, but
+  // the bytes are still sitting in the bucket until somebody removes them.
+  return { ok: true, video: record };
+}
+
+/** Newest first, which is the only order a video library is ever read in. */
+export const getVideos = () =>
+  [...state.videos].sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
 
 /* ---------------------------------------------------------------- program */
 

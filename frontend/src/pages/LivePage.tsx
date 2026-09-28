@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useLocation } from '../context/LocationContext';
 import { useResource } from '../hooks';
-import { getLive, getNews } from '../services/weather';
+import { getLive, getNews, getVideoLibrary } from '../services/weather';
 import BreakingBanner from '../components/alerts/BreakingBanner';
 import NewsCard from '../components/news/NewsCard';
 import WeatherIcon from '../components/ui/WeatherIcon';
@@ -33,11 +33,13 @@ export function LivePage() {
     [location.lat, location.lon],
     { refreshMs: 300000 },
   );
+  const videos = useResource((signal) => getVideoLibrary(signal), [], { refreshMs: 300000 });
 
   const data = live.data;
   const stream = data?.stream;
   const coverage = data?.coverage;
   const onAir = Boolean(stream?.available && stream.url);
+  const latestVideo = videos.data?.latest ?? null;
 
   // Attach an HLS stream natively where the browser supports it (Safari, iOS).
   useEffect(() => {
@@ -127,6 +129,34 @@ export function LivePage() {
           </span>
         </div>
       </Panel>
+
+      {latestVideo && (
+        // Below the stream and labelled as recorded, never inside the stage.
+        // This page's whole point is that a viewer can tell at a glance
+        // whether the station is actually on air.
+        <Panel
+          eyebrow="Recorded"
+          title={latestVideo.title}
+          flush
+          action={<Link to="/video">All video</Link>}
+        >
+          <video
+            className="nc-live__latest"
+            src={latestVideo.url}
+            poster={latestVideo.poster ?? undefined}
+            controls
+            playsInline
+            preload="metadata"
+          >
+            Your browser cannot play this video.
+          </video>
+          <div className="nc-live__stage-foot">
+            <span>
+              Posted {new Date(latestVideo.publishedAt).toLocaleString()} by the Storm 12 Weather team.
+            </span>
+          </div>
+        </Panel>
+      )}
 
       <div className="nc-live__grid">
         <Panel eyebrow="Right now" title="Current Conditions">

@@ -617,7 +617,47 @@ export interface AdminState {
   stationAlerts: StationAlert[];
   graphics: StationGraphic[];
   program: ProgramGraphic | null;
+  videos: StationVideo[];
+  video: {
+    /** False until the R2 bucket exists and is bound; uploading is off. */
+    storageConfigured: boolean;
+    partSize: number;
+    maxBytes: number;
+    types: string[];
+  };
   overrides: Record<string, boolean>;
+}
+
+/** A clip as the newsroom sees it, storage keys and all. */
+export interface StationVideo {
+  id: string;
+  title: string;
+  description: string;
+  key: string;
+  posterKey: string | null;
+  contentType: string;
+  size: number;
+  durationSeconds: number | null;
+  publishedAt: string;
+  updatedAt: string;
+}
+
+/** The same clip as a viewer sees it: URLs instead of bucket keys. */
+export interface VideoCard {
+  id: string;
+  title: string;
+  description: string;
+  durationSeconds: number | null;
+  size: number;
+  publishedAt: string;
+  url: string;
+  poster: string | null;
+}
+
+export interface VideoLibrary {
+  videos: VideoCard[];
+  latest: VideoCard | null;
+  storageConfigured: boolean;
 }
 
 export interface SourceHealth {

@@ -6,6 +6,7 @@ import { MarketsPanel, StationPanel } from '../components/admin/StationPanels';
 import { ClosingsPanel, OnAirPanel, ViewerAlertsPanel } from '../components/admin/NewsroomPanels';
 import { GraphicsStudio } from '../components/admin/GraphicsStudio';
 import { OpsPanel } from '../components/admin/OpsPanel';
+import { VideoPanel } from '../components/admin/VideoPanel';
 import { getAdminState, getSession, login, logout, readToken } from '../services/admin';
 import { formatRelative } from '../utils/format';
 import type { AdminState } from '../api/types';
@@ -22,7 +23,7 @@ import '../components/admin/admin.css';
  * newsroom, not another page of the weather site.
  */
 
-type SectionId = 'ops' | 'onair' | 'alerts' | 'closings' | 'graphics' | 'station' | 'markets';
+type SectionId = 'ops' | 'onair' | 'alerts' | 'closings' | 'graphics' | 'video' | 'station' | 'markets';
 
 const SECTIONS: Array<{ id: SectionId; label: string; group: string; title: string; blurb: string }> = [
   {
@@ -59,6 +60,13 @@ const SECTIONS: Array<{ id: SectionId; label: string; group: string; title: stri
     group: 'Newsroom',
     title: 'Graphics Studio',
     blurb: 'Build graphics from live weather, cue them in preview and take them to air.',
+  },
+  {
+    id: 'video',
+    label: 'Video Library',
+    group: 'Newsroom',
+    title: 'Video Library',
+    blurb: 'Upload finished clips. The newest one leads the Live Weather page.',
   },
   {
     id: 'station',
@@ -324,6 +332,7 @@ export function AdminPage() {
             {section === 'alerts' && <ViewerAlertsPanel state={state} onSaved={refresh} />}
             {section === 'closings' && <ClosingsPanel state={state} onSaved={refresh} />}
             {section === 'graphics' && <GraphicsStudio state={state} onSaved={refresh} />}
+            {section === 'video' && <VideoPanel state={state} onSaved={refresh} />}
             {section === 'station' && <StationPanel key={state.station.name} state={state} onSaved={refresh} />}
             {section === 'markets' && <MarketsPanel state={state} onSaved={refresh} />}
           </>

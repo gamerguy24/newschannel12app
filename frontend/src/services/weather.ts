@@ -21,6 +21,7 @@ import type {
   TropicalTrackPoint,
   WeatherAlert,
   WmsDescriptor,
+  VideoLibrary,
 } from '../api/types';
 
 /**
@@ -406,3 +407,9 @@ export const getCountyBoundaries = (signal?: AbortSignal) =>
 /** The towns this station puts on its map. */
 export const getBroadcastPlaces = (signal?: AbortSignal) =>
   apiGet<{ places: BroadcastPlaceDef[] }>('/map/places', undefined, { signal });
+
+/* ----------------------------------------------------------------- video */
+
+/** The station's own clips, newest first. */
+export const getVideoLibrary = (signal?: AbortSignal) =>
+  apiGet<VideoLibrary>('/videos', undefined, { signal });
