@@ -573,42 +573,59 @@ const mergedPath = (shapes: CountyShape[]) => shapes.map((shape) => shape.d).joi
 const CARD_W = 170;
 const CARD_H = 96;
 
-/** Where a callout card may sit relative to its town, nearest slot first. */
-const OFFSETS: Array<[number, number]> = [
-  [0, -90],
-  [0, 90],
-  [-130, 0],
-  [130, 0],
-  [-125, -78],
-  [125, -78],
-  [-125, 78],
-  [125, 78],
-  [0, -180],
-  [0, 180],
-  [-250, 0],
-  [250, 0],
-  [-210, -150],
-  [210, -150],
-  [-210, 150],
-  [210, 150],
-];
+/**
+ * Where map lettering may sit: on the town, then rings of increasing reach.
+ *
+ * The old table stopped about a county's width out, which is fine for a town
+ * on its own and useless around Nashville, where eight of these sit within
+ * one label of each other. With nowhere further to go they piled up. The
+ * rings stretch wider than they are tall because the coverage area is a wide
+ * map with empty space east and west, and that is where the room is.
+ */
+const MAP_SLOTS: Array<[number, number]> = (() => {
+  // Just above the town, not on it: a label centred on its own dot hides the
+  // dot behind the lettering, and then nothing points at the town at all.
+  const slots: Array<[number, number]> = [[0, -58]];
+  for (const radius of [104, 168, 244, 330, 430]) {
+    for (let i = 0; i < 12; i += 1) {
+      const angle = (i / 12) * Math.PI * 2 - Math.PI / 2;
+      slots.push([Math.round(Math.cos(angle) * radius * 1.3), Math.round(Math.sin(angle) * radius * 0.72)]);
+    }
+  }
+  return slots;
+})();
 
 /**
- * Where map lettering may sit, nearest first. Every slot is inside about a
- * county's width of the town: far enough to dodge a neighbour, never far
- * enough to read as somewhere else's number.
+ * Roughly how wide a run of bold type will be.
+ *
+ * The layout used to reserve a fixed width for every label, which is how
+ * "Murfreesboro" came to overlap its neighbours: at 36px it is about 230
+ * wide, the box said 176, and the solver happily called that clear. An
+ * estimate that tracks the actual string is worth far more here than an
+ * exact measurement, because it only has to be right enough to keep two
+ * labels apart.
  */
-const MAP_SLOTS: Array<[number, number]> = [
-  [0, 0],
-  [0, -116],
-  [0, 116],
-  [-132, 0],
-  [132, 0],
-  [-124, -104],
-  [124, -104],
-  [-124, 104],
-  [124, 104],
-];
+const textWidth = (text: string, size: number) => text.length * size * 0.56;
+
+/**
+ * Where a leader line from the town should stop: the edge of its own label,
+ * not the middle of it, so the line meets the box instead of running under
+ * the lettering.
+ */
+function leaderEnd(px: number, py: number, cx: number, cy: number, w: number, h: number): [number, number] {
+  const dx = cx - px;
+  const dy = cy - py;
+  if (!dx && !dy) return [cx, cy];
+  const halfW = w / 2 + 8;
+  const halfH = h / 2 + 8;
+  const scale = Math.min(
+    Math.abs(dx) > 0.01 ? halfW / Math.abs(dx) : Number.POSITIVE_INFINITY,
+    Math.abs(dy) > 0.01 ? halfH / Math.abs(dy) : Number.POSITIVE_INFINITY,
+  );
+  // A label sitting on its own town needs no line at all.
+  if (scale >= 1) return [cx, cy];
+  return [cx - dx * scale, cy - dy * scale];
+}
 
 interface Box {
   x0: number;
@@ -623,6 +640,9 @@ interface Callout {
   py: number;
   cx: number;
   cy: number;
+  /** What the solver reserved, so a leader can stop at the label's edge. */
+  w: number;
+  h: number;
 }
 
 /** Shared area of two boxes, in square pixels. */
@@ -644,41 +664,73 @@ function layoutCallouts(
   project: (lon: number, lat: number) => [number, number],
   tag: string,
   area: { x: number; y: number; w: number; h: number } = MAP,
-  box: { w: number; h: number } = { w: CARD_W, h: CARD_H },
-  slots: Array<[number, number]> = OFFSETS,
+  measure: (place: GraphicPlace) => { w: number; h: number } = () => ({ w: CARD_W, h: CARD_H }),
+  slots: Array<[number, number]> = MAP_SLOTS,
+  /** Corners already spoken for - a legend, a key, a line of hint text. */
+  reserve: Box[] = [],
 ): Callout[] {
-  const points = places.map((place) => ({ place, xy: project(place.lon, place.lat) }));
-  const dots: Box[] = points.map(({ xy }) => ({ x0: xy[0] - 12, y0: xy[1] - 12, x1: xy[0] + 12, y1: xy[1] + 12 }));
-  const placed: Box[] = [{ x0: area.x + 30, y0: area.y + 30, x1: area.x + 30 + tag.length * 19 + 56, y1: area.y + 82 }];
+  const points = places.map((place) => ({
+    place,
+    xy: project(place.lon, place.lat),
+    size: measure(place),
+  }));
+  const dots: Box[] = points.map(({ xy }) => ({ x0: xy[0] - 14, y0: xy[1] - 14, x1: xy[0] + 14, y1: xy[1] + 14 }));
+  const placed: Box[] = tag
+    ? [{ x0: area.x + 30, y0: area.y + 30, x1: area.x + 30 + tag.length * 19 + 56, y1: area.y + 82 }]
+    : [];
+  placed.push(...reserve);
   const bounds: Box = { x0: area.x + 8, y0: area.y + 8, x1: area.x + area.w - 8, y1: area.y + area.h - 8 };
-  const cardBox = (cx: number, cy: number): Box => ({
-    x0: cx - box.w / 2 - 6,
-    y0: cy - box.h / 2 - 6,
-    x1: cx + box.w / 2 + 6,
-    y1: cy + box.h / 2 + 6,
+
+  const cardBox = (cx: number, cy: number, size: { w: number; h: number }): Box => ({
+    x0: cx - size.w / 2 - 7,
+    y0: cy - size.h / 2 - 7,
+    x1: cx + size.w / 2 + 7,
+    y1: cy + size.h / 2 + 7,
   });
 
-  return points.map(({ place, xy }, index) => {
+  // The most hemmed-in towns choose first. Left until last, a town in the
+  // middle of the metro finds every good slot taken and lands on top of a
+  // neighbour; going first, it takes the one workable spot and the ones with
+  // open country around them bend around it.
+  const crowding = (index: number) => {
+    const [px, py] = points[index].xy;
+    return points.reduce(
+      (n, other, j) => (j === index || Math.hypot(other.xy[0] - px, other.xy[1] - py) > 230 ? n : n + 1),
+      0,
+    );
+  };
+  const order = points.map((_, i) => i).sort((a, b) => crowding(b) - crowding(a));
+
+  const out: Callout[] = new Array(points.length);
+  for (const index of order) {
+    const { place, xy, size } = points[index];
     const [px, py] = xy;
-    const others = dots.filter((_, j) => j !== index);
+
     let offset = slots[0];
     let best = Number.POSITIVE_INFINITY;
     for (const candidate of slots) {
-      const box = cardBox(px + candidate[0], py + candidate[1]);
-      const size = (box.x1 - box.x0) * (box.y1 - box.y0);
-      const score =
-        placed.reduce((sum, b) => sum + shared(box, b), 0) +
-        others.reduce((sum, b) => sum + shared(box, b), 0) +
-        (size - shared(box, bounds)) * 2;
+      const box = cardBox(px + candidate[0], py + candidate[1], size);
+      const onLabels = placed.reduce((sum, b) => sum + shared(box, b), 0);
+      const onDots = dots.reduce((sum, b, j) => (j === index ? sum : sum + shared(box, b)), 0);
+      const outside = (size.w + 14) * (size.h + 14) - shared(box, bounds);
+      const reach = Math.hypot(candidate[0], candidate[1]);
+
+      // Covering a neighbour is the worst outcome, leaving the frame worse
+      // still; distance is only a tiebreak, so a label travels as far as it
+      // must and no further.
+      const score = onLabels * 3 + onDots * 2 + outside * 4 + reach * 12 + (reach * reach) / 40;
       if (score < best) {
         best = score;
         offset = candidate;
         if (score === 0) break;
       }
     }
-    placed.push(cardBox(px + offset[0], py + offset[1]));
-    return { place, px, py, cx: px + offset[0], cy: py + offset[1] };
-  });
+
+    placed.push(cardBox(px + offset[0], py + offset[1], size));
+    out[index] = { place, px, py, cx: px + offset[0], cy: py + offset[1], w: size.w, h: size.h };
+  }
+
+  return out;
 }
 
 function AreaTempsGraphic({ f, station, market, stamp, places, lite }: TemplateProps & { places: GraphicPlace[]; lite?: boolean }) {
@@ -709,10 +761,15 @@ function AreaTempsGraphic({ f, station, market, stamp, places, lite }: TemplateP
       <rect x={MAP.x} y={MAP.y} width={MAP.w} height={MAP.h} rx="24" fill="none" stroke={PANEL_LINE} strokeOpacity="0.55" strokeWidth="2" />
 
       {places.length < 2 && <Empty>Loading area temperatures</Empty>}
-      {/* Leaders first, then the town dots, then the cards over both. */}
-      {callouts.map(({ place, px, py, cx, cy }) => (
-        <line key={`lead-${place.name}`} x1={px} y1={py} x2={cx} y2={cy} stroke="#ffffff" strokeOpacity="0.75" strokeWidth="3" />
-      ))}
+      {/* Leaders first, then the town dots, then the cards over both. Each
+          line stops at the edge of its own card rather than running under it. */}
+      {callouts.map(({ place, px, py, cx, cy, w, h }) => {
+        const [lx, ly] = leaderEnd(px, py, cx, cy, w, h);
+        if (lx === cx && ly === cy) return null;
+        return (
+          <line key={`lead-${place.name}`} x1={px} y1={py} x2={lx} y2={ly} stroke="#ffffff" strokeOpacity="0.8" strokeWidth="3" />
+        );
+      })}
       {callouts.map(({ place, px, py }) => (
         <circle key={`dot-${place.name}`} cx={px} cy={py} r="9" fill="#ffffff" stroke="#020915" strokeWidth="3" />
       ))}
@@ -1189,13 +1246,13 @@ function MapRelief({ frame }: { frame: { x: number; y: number; w: number; h: num
     <>
       <defs>
         <linearGradient id={id('relief')} x1="0" y1="0" x2="0.3" y2="1">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.13" />
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.07" />
           <stop offset="46%" stopColor="#ffffff" stopOpacity="0" />
-          <stop offset="100%" stopColor="#000a14" stopOpacity="0.32" />
+          <stop offset="100%" stopColor="#000a14" stopOpacity="0.18" />
         </linearGradient>
         <radialGradient id={id('map-vignette')} cx="0.5" cy="0.5" r="0.74">
-          <stop offset="60%" stopColor="#000000" stopOpacity="0" />
-          <stop offset="100%" stopColor="#00060f" stopOpacity="0.5" />
+          <stop offset="62%" stopColor="#000000" stopOpacity="0" />
+          <stop offset="100%" stopColor="#00060f" stopOpacity="0.26" />
         </radialGradient>
       </defs>
       <rect x={frame.x} y={frame.y} width={frame.w} height={frame.h} fill={`url(#${id('relief')})`} />
@@ -1204,13 +1261,19 @@ function MapRelief({ frame }: { frame: { x: number; y: number; w: number; h: num
   );
 }
 
-/** The hairline county grid and the heavier state borders over it. */
-function Boundaries({ shapes, tone = '#08141d' }: { shapes: CountyShape[]; tone?: string }) {
+/**
+ * The hairline county grid and the heavier state borders over it.
+ *
+ * Drawn in a tone lighter than the land rather than darker. Near-black lines
+ * on a dark map are a map with no lines on it: they read as a grey wash from
+ * across a room, which is the distance this is looked at from.
+ */
+function Boundaries({ shapes, tone = '#9dc4ef' }: { shapes: CountyShape[]; tone?: string }) {
   return (
     <>
-      <path d={mergedPath(shapes)} fill="none" stroke={tone} strokeOpacity="0.38" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d={mergedPath(shapes)} fill="none" stroke={tone} strokeOpacity="0.5" strokeWidth="1.6" strokeLinejoin="round" />
       {stateOutlines(shapes).map((d, i) => (
-        <path key={i} d={d} fill="none" stroke={tone} strokeOpacity="0.85" strokeWidth="4" strokeLinejoin="round" />
+        <path key={i} d={d} fill="none" stroke={tone} strokeOpacity="0.92" strokeWidth="4.5" strokeLinejoin="round" />
       ))}
     </>
   );
@@ -1225,7 +1288,12 @@ function HeatIndexGraphic({ f, station, market, stamp, places, lite }: TemplateP
   const key = usable.map((p) => `${p.name}:${p.lat}:${p.lon}`).join('|');
   const fit = useMemo(() => (usable.length > 1 ? fitProjection(usable, BAR_MAP) : null), [key]); // eslint-disable-line react-hooks/exhaustive-deps
   const parts = useMemo(() => (shapes && fit ? countyShapes(shapes, fit) : []), [shapes, fit]);
-  const spots = fit ? layoutCallouts(usable, fit.project, '', BAR_MAP, { w: 176, h: 132 }, MAP_SLOTS) : [];
+  const spots = fit
+    ? layoutCallouts(usable, fit.project, '', BAR_MAP, (place) => ({
+        w: Math.max(textWidth(place.name, 28), 104),
+        h: 104,
+      }))
+    : [];
 
   return (
     <>
@@ -1245,21 +1313,20 @@ function HeatIndexGraphic({ f, station, market, stamp, places, lite }: TemplateP
       <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} fill="none" stroke="#03101c" strokeOpacity="0.8" strokeWidth="3" />
 
       {usable.length < 2 && <Empty>Loading the heat index</Empty>}
-      {spots.map(({ place, px, py, cx, cy }) => {
+      {spots.map(({ place, px, py, cx, cy, w, h }) => {
         const reading = place.feels ?? place.temp;
-        const moved = Math.hypot(cx - px, cy - py) > 40;
+        const [lx, ly] = leaderEnd(px, py, cx, cy, w, h);
+        const moved = lx !== cx || ly !== cy;
         return (
           <g key={place.name}>
-            {moved && (
-              <>
-                <line x1={px} y1={py} x2={cx} y2={cy - 24} stroke="#2a1108" strokeOpacity="0.55" strokeWidth="4" />
-                <circle cx={px} cy={py} r="7" fill="#ffffff" stroke="#2a1108" strokeWidth="3" />
-              </>
-            )}
-            <text x={cx} y={cy} textAnchor="middle" fontFamily={FONT} fontSize="80" fontWeight="800" letterSpacing="-4" {...OUTLINE}>
+            {/* Every town keeps its own dot and its own line to it, so a
+                reading that had to move still says which town it belongs to. */}
+            {moved && <line x1={px} y1={py} x2={lx} y2={ly} stroke="#2a1108" strokeOpacity="0.65" strokeWidth="4" />}
+            <circle cx={px} cy={py} r="7" fill="#ffffff" stroke="#2a1108" strokeWidth="3" />
+            <text x={cx} y={cy + 6} textAnchor="middle" fontFamily={FONT} fontSize="62" fontWeight="800" letterSpacing="-3" {...OUTLINE}>
               {reading === null ? '--' : Math.round(reading)}
             </text>
-            <text x={cx} y={cy + 42} textAnchor="middle" fontFamily={FONT} fontSize="36" fontWeight="700" {...OUTLINE} strokeWidth="8">
+            <text x={cx} y={cy + 40} textAnchor="middle" fontFamily={FONT} fontSize="28" fontWeight="700" {...OUTLINE} strokeWidth="7">
               {place.name}
             </text>
           </g>
@@ -1287,7 +1354,17 @@ function AlertMapGraphic({
   const key = places.map((p) => `${p.name}:${p.lat}:${p.lon}`).join('|');
   const fit = useMemo(() => (places.length > 1 ? fitProjection(places, BAR_MAP) : null), [key]); // eslint-disable-line react-hooks/exhaustive-deps
   const parts = useMemo(() => (shapes && fit ? countyShapes(shapes, fit) : []), [shapes, fit]);
-  const labels = fit ? layoutCallouts(places, fit.project, '', BAR_MAP, { w: 236, h: 84 }, MAP_SLOTS) : [];
+  const labels = fit
+    ? layoutCallouts(
+        places,
+        fit.project,
+        '',
+        BAR_MAP,
+        (place) => ({ w: textWidth(place.name, 32), h: 46 }),
+        MAP_SLOTS,
+        [{ x0: BAR_MAP.x + 16, y0: BAR_MAP.y + 16, x1: BAR_MAP.x + 620, y1: BAR_MAP.y + 360 }],
+      )
+    : [];
 
   const byCounty = new Map(areas.map((area) => [area.id, area]));
   // Legend order follows severity, so the worst alert reads first.
@@ -1335,13 +1412,14 @@ function AlertMapGraphic({
       <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} fill="none" stroke="#03101c" strokeOpacity="0.8" strokeWidth="3" />
 
       {places.length < 2 && <Empty>Loading the coverage area</Empty>}
-      {labels.map(({ place, px, py, cx, cy }) => {
-        const moved = Math.hypot(cx - px, cy - py) > 40;
+      {labels.map(({ place, px, py, cx, cy, w, h }) => {
+        const [lx, ly] = leaderEnd(px, py, cx, cy, w, h);
+        const moved = lx !== cx || ly !== cy;
         return (
           <g key={place.name}>
-            {moved && <line x1={px} y1={py} x2={cx} y2={cy - 18} stroke="#0a0a0a" strokeOpacity="0.6" strokeWidth="4" />}
+            {moved && <line x1={px} y1={py} x2={lx} y2={ly} stroke="#0a0a0a" strokeOpacity="0.7" strokeWidth="4" />}
             <circle cx={px} cy={py} r="8" fill="#ffffff" stroke="#0a0a0a" strokeWidth="4" />
-            <text x={cx} y={cy + 12} textAnchor="middle" fontFamily={FONT} fontSize="40" fontWeight="700" {...OUTLINE} strokeWidth="9">
+            <text x={cx} y={cy + 11} textAnchor="middle" fontFamily={FONT} fontSize="32" fontWeight="700" {...OUTLINE} strokeWidth="8">
               {place.name}
             </text>
           </g>
@@ -1405,7 +1483,21 @@ function SpcGraphic({
   const key = places.map((p) => `${p.name}:${p.lat}:${p.lon}`).join('|');
   const fit = useMemo(() => (places.length > 1 ? fitProjection(places, BAR_MAP) : null), [key]); // eslint-disable-line react-hooks/exhaustive-deps
   const parts = useMemo(() => (shapes && fit ? countyShapes(shapes, fit) : []), [shapes, fit]);
-  const labels = fit ? layoutCallouts(places, fit.project, '', BAR_MAP, { w: 236, h: 84 }, MAP_SLOTS) : [];
+  const labels = fit
+    ? layoutCallouts(
+        places,
+        fit.project,
+        '',
+        BAR_MAP,
+        (place) => ({ w: textWidth(place.name, 32), h: 46 }),
+        MAP_SLOTS,
+        // The risk key stacks down the left; with no outlook plotted a line
+        // of hint text runs across instead. Neither is somewhere a town name
+        // may land.
+        [{ x0: BAR_MAP.x + 16, y0: BAR_MAP.y + 16, x1: BAR_MAP.x + 900, y1: BAR_MAP.y + 116 },
+         { x0: BAR_MAP.x + 16, y0: BAR_MAP.y + 16, x1: BAR_MAP.x + 520, y1: BAR_MAP.y + 340 }],
+      )
+    : [];
 
   const drawn = useMemo(() => {
     if (!fit) return [];
@@ -1432,17 +1524,24 @@ function SpcGraphic({
           <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} />
         </clipPath>
         <linearGradient id={id('land')} x1="0" y1="0" x2="0.2" y2="1">
-          <stop offset="0%" stopColor="#2b3b4c" />
-          <stop offset="100%" stopColor="#16222e" />
+          <stop offset="0%" stopColor="#15324f" />
+          <stop offset="100%" stopColor="#0a1e33" />
         </linearGradient>
       </defs>
 
       <g clipPath={`url(#${id('map')})`}>
         <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} fill={`url(#${id('land')})`} />
-        {drawn.map((shape, i) => (
-          <path key={i} d={shape.d} fill={shape.color} fillOpacity="0.62" stroke={shape.color} strokeOpacity="0.95" strokeWidth="3" strokeLinejoin="round" />
+        {/* The land is a map before anything is plotted on it: counties are
+            filled and outlined, so an outlook with no risk areas still shows
+            the viewer where they live. */}
+        {parts.map((shape) => (
+          <path key={shape.id} d={shape.d} fill="#123f6d" fillOpacity="0.72" stroke="none" />
         ))}
         <Boundaries shapes={parts} />
+        {/* Risk over the top, and opaque enough to win against it. */}
+        {drawn.map((shape, i) => (
+          <path key={i} d={shape.d} fill={shape.color} fillOpacity="0.68" stroke={shape.color} strokeOpacity="0.95" strokeWidth="3" strokeLinejoin="round" />
+        ))}
         <MapRelief frame={BAR_MAP} />
       </g>
       <rect x={BAR_MAP.x} y={BAR_MAP.y} width={BAR_MAP.w} height={BAR_MAP.h} fill="none" stroke="#03101c" strokeOpacity="0.8" strokeWidth="3" />
@@ -1454,13 +1553,14 @@ function SpcGraphic({
         </text>
       )}
 
-      {labels.map(({ place, px, py, cx, cy }) => {
-        const moved = Math.hypot(cx - px, cy - py) > 40;
+      {labels.map(({ place, px, py, cx, cy, w, h }) => {
+        const [lx, ly] = leaderEnd(px, py, cx, cy, w, h);
+        const moved = lx !== cx || ly !== cy;
         return (
           <g key={place.name}>
-            {moved && <line x1={px} y1={py} x2={cx} y2={cy - 18} stroke="#0a0a0a" strokeOpacity="0.6" strokeWidth="4" />}
-            <circle cx={px} cy={py} r="8" fill="#ffffff" stroke="#0a0a0a" strokeWidth="4" />
-            <text x={cx} y={cy + 12} textAnchor="middle" fontFamily={FONT} fontSize="38" fontWeight="700" {...OUTLINE} strokeWidth="9">
+            {moved && <line x1={px} y1={py} x2={lx} y2={ly} stroke="#04121f" strokeOpacity="0.75" strokeWidth="4" />}
+            <circle cx={px} cy={py} r="8" fill="#ffffff" stroke="#04121f" strokeWidth="4" />
+            <text x={cx} y={cy + 11} textAnchor="middle" fontFamily={FONT} fontSize="32" fontWeight="700" {...OUTLINE} strokeWidth="8">
               {place.name}
             </text>
           </g>
