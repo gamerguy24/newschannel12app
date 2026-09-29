@@ -22,6 +22,8 @@ import type {
   WeatherAlert,
   WmsDescriptor,
   VideoLibrary,
+  BlogCard,
+  BlogPost,
 } from '../api/types';
 
 /**
@@ -413,3 +415,12 @@ export const getBroadcastPlaces = (signal?: AbortSignal) =>
 /** The station's own clips, newest first. */
 export const getVideoLibrary = (signal?: AbortSignal) =>
   apiGet<VideoLibrary>('/videos', undefined, { signal });
+
+/* ------------------------------------------------------------------ blog */
+
+/** Published posts only - a draft has no public address. */
+export const getBlog = (signal?: AbortSignal) =>
+  apiGet<{ posts: BlogCard[]; total: number }>('/blog', undefined, { signal });
+
+export const getPost = (slug: string, signal?: AbortSignal) =>
+  apiGet<{ post: BlogPost }>(`/blog/${encodeURIComponent(slug)}`, undefined, { signal });

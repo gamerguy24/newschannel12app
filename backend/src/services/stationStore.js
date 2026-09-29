@@ -34,6 +34,10 @@ const EMPTY = {
   program: null,
   /** The video library. The files live in R2; only the card lives here. */
   videos: [],
+  /** Blog posts, newest first once published. */
+  posts: [],
+  /** Uploaded stills, referenced by posts. The bytes are in R2. */
+  media: [],
 };
 
 let state = structuredClone(EMPTY);
@@ -540,6 +544,139 @@ export function deleteVideo(id) {
 /** Newest first, which is the only order a video library is ever read in. */
 export const getVideos = () =>
   [...state.videos].sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
+
+/* ------------------------------------------------------------- the blog */
+
+/**
+ * An uploaded still.
+ *
+ * Images are registered here rather than addressed by their bucket key, so a
+ * post can reference one by id and the key never has to appear in a page or
+ * a URL. It also means the same still can lead two posts without being
+ * uploaded twice.
+ */
+export function saveMedia(entry) {
+  const key = text(entry?.key, 200);
+  if (!key) return { ok: false, errors: ['A media record needs the key of its stored file.'] };
+
+  const record = {
+    id: entry?.id || `img-${crypto.randomUUID()}`,
+    key,
+    contentType: text(entry?.contentType, 80) || 'image/jpeg',
+    size: Number.isFinite(Number(entry?.size)) ? Math.max(0, Math.round(Number(entry.size))) : 0,
+    uploadedAt: new Date().toISOString(),
+  };
+
+  state.media.unshift(record);
+  commit();
+  return { ok: true, media: record };
+}
+
+export const getMedia = () => state.media;
+export const findMedia = (id) => state.media.find((m) => m.id === id) ?? null;
+
+/** A title turned into something that can live in a URL. */
+function slugify(value, fallback) {
+  const slug = String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return slug || fallback;
+}
+
+const BLOCK_TYPES = ['text', 'heading', 'image', 'video'];
+
+/**
+ * The body of a post, as ordered blocks rather than markup.
+ *
+ * Blocks instead of HTML or markdown on purpose: the page renders each one as
+ * a React element, so there is no markup to sanitise and no path by which
+ * anything typed into the editor can become live HTML on the public site.
+ */
+function cleanBlocks(blocks) {
+  return (Array.isArray(blocks) ? blocks : [])
+    .slice(0, 80)
+    .map((block) => {
+      const type = BLOCK_TYPES.includes(block?.type) ? block.type : 'text';
+      const base = { id: text(block?.id, 60) || `blk-${crypto.randomUUID()}`, type };
+      if (type === 'image') {
+        return { ...base, mediaId: text(block?.mediaId, 60), caption: text(block?.caption, 240) };
+      }
+      if (type === 'video') {
+        return { ...base, videoId: text(block?.videoId, 60), caption: text(block?.caption, 240) };
+      }
+      return { ...base, value: text(block?.value, type === 'heading' ? 160 : 4000) };
+    })
+    // A block with nothing in it is an editing artefact, not content.
+    .filter((block) =>
+      block.type === 'image' ? block.mediaId : block.type === 'video' ? block.videoId : block.value,
+    );
+}
+
+export function savePost(entry) {
+  const title = text(entry?.title, 160);
+  if (!title) return { ok: false, errors: ['Give the post a title.'] };
+
+  const existing = state.posts.find((p) => p.id === entry?.id) ?? null;
+  const id = existing?.id || `post-${crypto.randomUUID()}`;
+  const wanted = slugify(entry?.slug || title, id);
+  // Two posts cannot share a URL, so a repeat gets the id stitched on.
+  const clash = state.posts.some((p) => p.slug === wanted && p.id !== id);
+  const published = entry?.status === 'published';
+
+  const record = {
+    id,
+    slug: clash ? `${wanted}-${id.slice(-6)}` : wanted,
+    title,
+    summary: text(entry?.summary, 400),
+    heroMediaId: text(entry?.heroMediaId, 60) || null,
+    blocks: cleanBlocks(entry?.blocks),
+    status: published ? 'published' : 'draft',
+    // First publish stamps the date; editing a live post does not move it.
+    publishedAt: published ? existing?.publishedAt ?? new Date().toISOString() : null,
+    createdAt: existing?.createdAt ?? new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const at = state.posts.findIndex((p) => p.id === id);
+  if (at >= 0) state.posts[at] = record;
+  else state.posts.unshift(record);
+
+  commit();
+  return { ok: true, post: record };
+}
+
+export function deletePost(id) {
+  const post = state.posts.find((p) => p.id === id) ?? null;
+  state.posts = state.posts.filter((p) => p.id !== id);
+
+  // Stills this post used, that no surviving post uses, are now unreachable.
+  let orphaned = [];
+  if (post) {
+    const used = new Set(
+      state.posts.flatMap((p) => [p.heroMediaId, ...p.blocks.map((b) => b.mediaId)]).filter(Boolean),
+    );
+    const mine = [post.heroMediaId, ...post.blocks.map((b) => b.mediaId)].filter(Boolean);
+    const drop = new Set(mine.filter((mediaId) => !used.has(mediaId)));
+    orphaned = state.media.filter((m) => drop.has(m.id));
+    state.media = state.media.filter((m) => !drop.has(m.id));
+  }
+
+  commit();
+  return { ok: true, post, orphaned };
+}
+
+/** Everything, drafts included - the newsroom's own view. */
+export const getPosts = () =>
+  [...state.posts].sort((a, b) =>
+    String(b.publishedAt ?? b.updatedAt).localeCompare(String(a.publishedAt ?? a.updatedAt)),
+  );
+
+/** Only what has actually been published, which is all a viewer may see. */
+export const getPublishedPosts = () => getPosts().filter((p) => p.status === 'published');
+
+export const findPost = (slug) => getPublishedPosts().find((p) => p.slug === slug) ?? null;
 
 /* ---------------------------------------------------------------- program */
 

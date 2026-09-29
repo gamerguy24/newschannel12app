@@ -10,6 +10,7 @@ import mapRoutes from '../backend/src/routes/maps.js';
 import miscRoutes from '../backend/src/routes/misc.js';
 import adminRoutes from '../backend/src/routes/admin.js';
 import videoRoutes from '../backend/src/routes/video.js';
+import blogRoutes from '../backend/src/routes/blog.js';
 
 /**
  * STORM 12 WEATHER - the Worker.
@@ -31,6 +32,7 @@ const MOUNTS = [
   { prefix: '/api/alerts', router: alertRoutes },
   { prefix: '/api/admin', router: adminRoutes },
   { prefix: '/api', router: videoRoutes },
+  { prefix: '/api', router: blogRoutes },
   { prefix: '/api', router: mapRoutes },
   { prefix: '/api', router: miscRoutes },
 ];

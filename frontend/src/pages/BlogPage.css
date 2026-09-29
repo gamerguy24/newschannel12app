@@ -1,0 +1,133 @@
+/* Index cards, then the post itself. Both live here because they share the
+   measure and the figure styling. */
+
+.nc-blog__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-4);
+}
+
+.nc-blog__link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.nc-blog__hero {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+
+.nc-blog__hero--blank {
+  background: linear-gradient(135deg, #16273c, #0d1826);
+}
+
+.nc-blog__body {
+  padding: var(--space-3);
+}
+
+.nc-blog__title {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
+.nc-blog__link:hover .nc-blog__title {
+  color: var(--nc-cyan);
+}
+
+.nc-blog__stamp {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--nc-text-dim);
+}
+
+.nc-blog__summary {
+  margin: var(--space-2) 0 0;
+  color: var(--nc-text-dim);
+  line-height: 1.5;
+  font-size: 0.92rem;
+}
+
+/* -------------------------------------------------------------- one post */
+
+.nc-post__back {
+  margin: 0 0 var(--space-3);
+  font-size: 0.85rem;
+}
+
+.nc-post__head {
+  max-width: 68ch;
+}
+
+.nc-post__stamp {
+  margin: var(--space-2) 0 0;
+  color: var(--nc-text-dim);
+  font-size: 0.85rem;
+}
+
+.nc-post__summary {
+  margin: var(--space-3) 0 0;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--nc-text-dim);
+}
+
+.nc-post__lead {
+  width: 100%;
+  max-height: 460px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  margin: var(--space-4) 0;
+  background: #000;
+}
+
+.nc-post__body {
+  padding: var(--space-4);
+}
+
+/* Prose wants a measure. Wide lines are hard to track back from. */
+.nc-post__para,
+.nc-post__heading {
+  max-width: 68ch;
+}
+
+.nc-post__para {
+  margin: 0 0 var(--space-3);
+  line-height: 1.7;
+}
+
+.nc-post__heading {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: 1.25rem;
+}
+
+.nc-post__heading:first-child {
+  margin-top: 0;
+}
+
+.nc-post__figure {
+  margin: var(--space-4) 0;
+}
+
+.nc-post__figure img,
+.nc-post__figure video {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  display: block;
+  background: #000;
+}
+
+.nc-post__figure video {
+  aspect-ratio: 16 / 9;
+}
+
+.nc-post__figure figcaption {
+  margin-top: var(--space-2);
+  font-size: 0.85rem;
+  color: var(--nc-text-dim);
+  max-width: 68ch;
+}

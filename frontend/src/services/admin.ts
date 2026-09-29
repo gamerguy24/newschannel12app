@@ -10,6 +10,8 @@ import type {
   SchoolClosing,
   StationAlert,
   StationGraphic,
+  StationPost,
+  StationPostBlock,
   StationVideo,
 } from '../api/types';
 
@@ -260,3 +262,24 @@ export const updateVideo = (id: string, patch: { title?: string; description?: s
   adminFetch<{ video: StationVideo }>(`/videos/${id}`, { method: 'PUT', body: JSON.stringify(patch) });
 
 export const deleteVideo = (id: string) => adminFetch<{ ok: true }>(`/videos/${id}`, { method: 'DELETE' });
+
+/* ------------------------------------------------------------------ blog */
+
+/**
+ * A still for a post. One request: an image too large for a Worker body is
+ * too large to put on a page.
+ */
+export const uploadPostImage = (file: File) =>
+  adminSend<{ media: { id: string; url: string } }>('/media', file, file.type, 'POST');
+
+export const savePost = (post: {
+  id?: string;
+  title: string;
+  slug?: string;
+  summary?: string;
+  heroMediaId?: string | null;
+  blocks: StationPostBlock[];
+  status: 'draft' | 'published';
+}) => adminFetch<{ post: StationPost }>('/posts', { method: 'POST', body: JSON.stringify(post) });
+
+export const deletePost = (id: string) => adminFetch<{ ok: true }>(`/posts/${id}`, { method: 'DELETE' });

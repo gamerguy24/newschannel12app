@@ -49,7 +49,7 @@ export const videoStorageReady = (env) => Boolean(videoBucket(env));
 function requireBucket(env) {
   const bucket = videoBucket(env);
   if (!bucket) {
-    throw fail(503, 'Video storage is not configured. Create the R2 bucket and bind it as VIDEO.');
+    throw fail(503, 'Media storage is not configured. Create the R2 bucket and bind it as VIDEO.');
   }
   return bucket;
 }
@@ -67,6 +67,22 @@ export function videoKey(contentType) {
 }
 
 export const posterKey = () => `posters/${crypto.randomUUID()}.jpg`;
+
+/** Stills for the blog. Same bucket, same reasoning, different prefix. */
+const IMAGE_EXTENSIONS = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+};
+
+export const IMAGE_TYPES = Object.keys(IMAGE_EXTENSIONS);
+
+/** A still small enough to go up in one request, unlike a video. */
+export const IMAGE_MAX_BYTES = 12 * 1024 * 1024;
+
+export const imageKey = (contentType) =>
+  `images/${crypto.randomUUID()}.${IMAGE_EXTENSIONS[contentType] ?? 'jpg'}`;
 
 /* ------------------------------------------------------------- uploading */
 

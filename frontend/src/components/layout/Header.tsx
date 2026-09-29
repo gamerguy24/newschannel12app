@@ -23,6 +23,7 @@ export const NAV_ITEMS = [
   { to: '/tropics', label: 'Tropics' },
   { to: '/discussion', label: 'Discussion' },
   { to: '/video', label: 'Video' },
+  { to: '/blog', label: 'Blog' },
   { to: '/news', label: 'News' },
   { to: '/closings', label: 'Closings' },
 ];

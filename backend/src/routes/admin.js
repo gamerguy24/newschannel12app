@@ -13,12 +13,16 @@ import {
   getProgram,
   getStationIdentity,
   getStore,
+  getPosts,
   getVideos,
 } from '../services/stationStore.js';
 import {
+  IMAGE_MAX_BYTES,
+  IMAGE_TYPES,
   VIDEO_MAX_BYTES,
   VIDEO_PART_SIZE,
   VIDEO_TYPES,
+  imageKey,
   abortUpload,
   completeUpload,
   deleteObjects,
@@ -161,6 +165,8 @@ router.get(
         graphics: getGraphics(),
         program: getProgram(),
         videos: getVideos(),
+        posts: getPosts(),
+        blog: { imageTypes: IMAGE_TYPES, imageMaxBytes: IMAGE_MAX_BYTES },
         video: {
           storageConfigured: videoStorageReady(req.env),
           partSize: VIDEO_PART_SIZE,
@@ -392,6 +398,58 @@ router.delete(
     // The card goes first: a viewer must never be handed a link to bytes that
     // are already on their way out of the bucket.
     if (outcome.video) await deleteObjects(req.env, [outcome.video.key, outcome.video.posterKey]);
+    res.json(envelope({ ok: true }));
+  }),
+);
+
+/* ------------------------------------------------------------------ blog */
+
+/**
+ * A still for a post.
+ *
+ * One request, unlike a video: an image that would not fit in a Worker body
+ * is an image nobody should be putting on a web page anyway.
+ */
+router.post(
+  '/media',
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    const contentType = String(req.headers['content-type'] ?? '').split(';')[0].trim();
+    if (!IMAGE_TYPES.includes(contentType)) {
+      throw new HttpError(415, `That is not an image this site can show. Use one of: ${IMAGE_TYPES.join(', ')}.`);
+    }
+
+    const body = await req.raw.arrayBuffer();
+    if (!body.byteLength) throw new HttpError(400, 'The image was empty.');
+    if (body.byteLength > IMAGE_MAX_BYTES) {
+      throw new HttpError(413, `That image is larger than the ${Math.round(IMAGE_MAX_BYTES / 1024 / 1024)} MB ceiling.`);
+    }
+
+    const key = await putObject(req.env, imageKey(contentType), body, contentType);
+    const saved = await runStore(req.env, 'saveMedia', { key, contentType, size: body.byteLength });
+    if (!saved.ok) {
+      await deleteObjects(req.env, [key]);
+      throw new HttpError(400, saved.errors.join(' '));
+    }
+
+    res.json(envelope({ media: { id: saved.media.id, url: `/api/media/${saved.media.id}` } }));
+  }),
+);
+
+router.post(
+  '/posts',
+  requireAdmin,
+  asyncRoute(async (req, res) => result(res, await runStore(req.env, 'savePost', req.body ?? {}))),
+);
+
+router.delete(
+  '/posts/:id',
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    const outcome = await runStore(req.env, 'deletePost', req.params.id);
+    // Stills that no surviving post references go with it, rather than
+    // sitting in the bucket unreachable and billed for.
+    await deleteObjects(req.env, (outcome.orphaned ?? []).map((m) => m.key));
     res.json(envelope({ ok: true }));
   }),
 );

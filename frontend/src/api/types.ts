@@ -618,6 +618,8 @@ export interface AdminState {
   graphics: StationGraphic[];
   program: ProgramGraphic | null;
   videos: StationVideo[];
+  posts: StationPost[];
+  blog: { imageTypes: string[]; imageMaxBytes: number };
   video: {
     /** False until the R2 bucket exists and is bound; uploading is off. */
     storageConfigured: boolean;
@@ -658,6 +660,58 @@ export interface VideoLibrary {
   videos: VideoCard[];
   latest: VideoCard | null;
   storageConfigured: boolean;
+}
+
+/* ------------------------------------------------------------------ blog */
+
+/**
+ * A post body is ordered blocks, not markup.
+ *
+ * The page renders one React element per block, so nothing typed into the
+ * editor can ever become live HTML on the public site.
+ */
+export type PostBlock =
+  // Split rather than 'text' | 'heading' in one member: a discriminated
+  // union only narrows when each variant names exactly one type.
+  | { id: string; type: 'text'; value: string }
+  | { id: string; type: 'heading'; value: string }
+  | { id: string; type: 'image'; caption: string; url: string }
+  | { id: string; type: 'video'; caption: string; title: string; url: string; poster: string | null };
+
+/** The editor's copy: ids rather than resolved URLs. */
+export interface StationPostBlock {
+  id: string;
+  type: 'text' | 'heading' | 'image' | 'video';
+  value?: string;
+  caption?: string;
+  mediaId?: string;
+  videoId?: string;
+}
+
+export interface StationPost {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string;
+  heroMediaId: string | null;
+  blocks: StationPostBlock[];
+  status: 'draft' | 'published';
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BlogCard {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string;
+  publishedAt: string | null;
+  hero: string | null;
+}
+
+export interface BlogPost extends BlogCard {
+  blocks: PostBlock[];
 }
 
 export interface SourceHealth {
