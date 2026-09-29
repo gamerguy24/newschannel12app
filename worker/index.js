@@ -11,6 +11,8 @@ import miscRoutes from '../backend/src/routes/misc.js';
 import adminRoutes from '../backend/src/routes/admin.js';
 import videoRoutes from '../backend/src/routes/video.js';
 import blogRoutes from '../backend/src/routes/blog.js';
+import notificationRoutes from '../backend/src/routes/notifications.js';
+import { scanForAlerts } from '../backend/src/services/notify.js';
 
 /**
  * STORM 12 WEATHER - the Worker.
@@ -33,13 +35,16 @@ const MOUNTS = [
   { prefix: '/api/admin', router: adminRoutes },
   { prefix: '/api', router: videoRoutes },
   { prefix: '/api', router: blogRoutes },
+  { prefix: '/api', router: notificationRoutes },
   { prefix: '/api', router: mapRoutes },
   { prefix: '/api', router: miscRoutes },
 ];
 
 /** Playout and the admin panel read state that must not be a moment stale. */
 const needsFreshState = (pathname) =>
-  pathname === '/api/graphics/program' || pathname.startsWith('/api/admin');
+  pathname === '/api/graphics/program' ||
+  pathname.startsWith('/api/admin') ||
+  pathname.startsWith('/api/notifications');
 
 function corsHeaders(request, url) {
   const origin = request.headers.get('origin');
@@ -111,5 +116,25 @@ export default {
       for (const [key, value] of Object.entries(cors)) response.headers.set(key, value);
     }
     return response;
+  },
+
+  /**
+   * The minute hand.
+   *
+   * Nothing tells this app when a warning is issued - the NWS has to be
+   * asked - so a cron trigger asks, and anything new goes out as a push.
+   * Alerts are matched by id, so a warning that runs for an hour is
+   * announced once rather than sixty times.
+   */
+  async scheduled(event, env, ctx) {
+    hydrateConfig(env);
+    await hydrate(env, { fresh: true });
+    try {
+      const result = await scanForAlerts(env);
+      if (result.sent) console.log(`[nc12] pushed ${result.sent} for ${result.notice?.title}`);
+    } catch (err) {
+      recordError({ method: 'CRON', url: 'scheduled:alerts', status: 500, message: err?.message });
+      console.warn(`[nc12] alert scan failed: ${err.message}`);
+    }
   },
 };

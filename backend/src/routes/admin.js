@@ -35,6 +35,7 @@ import {
 // Every mutation runs in the Newsroom Durable Object, which holds the only
 // writable copy of station state; this worker only ever reads a snapshot.
 import { runStore } from '../../../worker/store-bridge.js';
+import { publishNotice } from '../services/notify.js';
 import { clearRecentErrors, getDiagnosticsSnapshot, probeSources } from '../services/diagnostics.js';
 
 /**
@@ -342,6 +343,15 @@ router.post(
     // leave something in the bucket that nothing points at.
     if (!saved.ok) await deleteObjects(req.env, [finished.key]);
 
+    if (saved.ok) {
+      await publishNotice(req.env, {
+        kind: 'video',
+        title: saved.video.title,
+        body: 'New video from the Storm 12 Weather team.',
+        url: '/video',
+      }).catch(() => undefined);
+    }
+
     result(res, saved);
   }),
 );
@@ -439,7 +449,20 @@ router.post(
 router.post(
   '/posts',
   requireAdmin,
-  asyncRoute(async (req, res) => result(res, await runStore(req.env, 'savePost', req.body ?? {}))),
+  asyncRoute(async (req, res) => {
+    const outcome = await runStore(req.env, 'savePost', req.body ?? {});
+    if (outcome.ok && outcome.firstPublish) {
+      // After the response would be better, but a notice that fails must not
+      // be silent either - so it is awaited and its result ignored.
+      await publishNotice(req.env, {
+        kind: 'post',
+        title: outcome.post.title,
+        body: outcome.post.summary || 'A new post from the Storm 12 Weather team.',
+        url: `/blog/${outcome.post.slug}`,
+      }).catch(() => undefined);
+    }
+    result(res, outcome);
+  }),
 );
 
 router.delete(

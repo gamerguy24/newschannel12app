@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { ALERT_TYPE_OPTIONS, useAlerts } from '../context/AlertContext';
 import { useLocation } from '../context/LocationContext';
 import { useResource } from '../hooks';
@@ -10,6 +11,7 @@ import {
   SegmentedControl,
   Toggle,
 } from '../components/ui/Primitives';
+import { disablePush, enablePush, pushState, type PushState } from '../services/notifications';
 import { formatRelative } from '../utils/format';
 import './SettingsPage.css';
 
@@ -43,6 +45,41 @@ export function SettingsPage() {
 
   const toggleType = (id: string) =>
     updateSettings({ types: { ...settings.types, [id]: !(settings.types[id] ?? true) } });
+
+  // Push is a different thing from the permission above: that one only
+  // reaches a browser that still has this page open somewhere.
+  const [push, setPush] = useState<PushState>('off');
+  const [pushBusy, setPushBusy] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void pushState().then((state) => {
+      if (live) setPush(state);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const togglePush = async (next: boolean) => {
+    setPushBusy(true);
+    try {
+      setPush(next ? await enablePush() : await disablePush());
+    } catch {
+      setPush('off');
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
+  const PUSH_COPY: Record<PushState, string> = {
+    on: 'This device will be notified even with the site closed.',
+    off: 'Warnings and new posts will only reach you while the site is open.',
+    denied:
+      'Your browser is blocking notifications for this site. Re-allow them in the site permissions for this page, then reload.',
+    unsupported:
+      'This browser cannot receive push. On an iPhone, add Storm 12 Weather to your home screen first, then turn this on from there.',
+    unconfigured: 'The newsroom has not finished setting push up yet.',
+  };
 
   return (
     <div className="nc-page nc-settings">
@@ -134,6 +171,27 @@ export function SettingsPage() {
             Send a test alert
           </Button>
         </div>
+      </Panel>
+
+      {/* ------------------------------------------------------------ push */}
+
+      <Panel
+        eyebrow="Even when the site is closed"
+        title="Push Notifications"
+        accent={push === 'on' ? 'var(--nc-green)' : 'var(--nc-gold)'}
+      >
+        <Toggle
+          label="Notify this device"
+          description="Severe weather warnings, alerts the newsroom issues, and new posts and video."
+          checked={push === 'on'}
+          onChange={(next) => void togglePush(next)}
+          disabled={pushBusy || push === 'unsupported' || push === 'denied' || push === 'unconfigured'}
+        />
+        <p className="nc-settings__note">{PUSH_COPY[push]}</p>
+        <p className="nc-settings__note">
+          Warnings only &mdash; tornado, severe thunderstorm and flash flood. Watches and advisories stay quiet, so
+          the ones that mean take cover are the ones that reach you.
+        </p>
       </Panel>
 
       {/* ----------------------------------------------------- alert types */}

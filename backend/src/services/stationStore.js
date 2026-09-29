@@ -38,6 +38,12 @@ const EMPTY = {
   posts: [],
   /** Uploaded stills, referenced by posts. The bytes are in R2. */
   media: [],
+  /** Browsers that asked to be told. Endpoint only - see worker/push.js. */
+  pushSubs: [],
+  /** What has been sent, newest first. The service worker reads the top one. */
+  notices: [],
+  /** Alert ids already pushed, so a running warning is announced once. */
+  notified: [],
 };
 
 let state = structuredClone(EMPTY);
@@ -644,7 +650,9 @@ export function savePost(entry) {
   else state.posts.unshift(record);
 
   commit();
-  return { ok: true, post: record };
+  // Editing a live post must not buzz everybody again, so the caller is told
+  // whether this is the moment it went public.
+  return { ok: true, post: record, firstPublish: published && !existing?.publishedAt };
 }
 
 export function deletePost(id) {
@@ -677,6 +685,83 @@ export const getPosts = () =>
 export const getPublishedPosts = () => getPosts().filter((p) => p.status === 'published');
 
 export const findPost = (slug) => getPublishedPosts().find((p) => p.slug === slug) ?? null;
+
+/* --------------------------------------------------------- notifications */
+
+/**
+ * A browser that wants to be told.
+ *
+ * Only the endpoint is kept. A payload-less push needs nothing else, so the
+ * station never holds the key material that would let it encrypt to somebody
+ * else's browser - there is nothing here worth stealing.
+ */
+export function addPushSub(endpoint) {
+  const url = text(endpoint, 500);
+  if (!/^https:\/\//.test(url)) return { ok: false, errors: ['That is not a push endpoint.'] };
+
+  // Re-subscribing is normal: a browser hands back the same endpoint every
+  // time until it is revoked.
+  if (!state.pushSubs.some((s) => s.endpoint === url)) {
+    state.pushSubs.push({ endpoint: url, createdAt: new Date().toISOString() });
+    commit();
+  }
+  return { ok: true, count: state.pushSubs.length };
+}
+
+export function removePushSubs(endpoints) {
+  const drop = new Set((Array.isArray(endpoints) ? endpoints : [endpoints]).filter(Boolean));
+  if (!drop.size) return { ok: true, count: state.pushSubs.length };
+  const before = state.pushSubs.length;
+  state.pushSubs = state.pushSubs.filter((s) => !drop.has(s.endpoint));
+  if (state.pushSubs.length !== before) commit();
+  return { ok: true, count: state.pushSubs.length };
+}
+
+export const getPushSubs = () => state.pushSubs;
+
+/**
+ * Record something worth telling people about.
+ *
+ * The notice is written before anything is pushed, because the push carries
+ * no payload: the service worker wakes up and asks what happened, and the
+ * answer has to already be here when it does.
+ */
+export function addNotice(entry) {
+  const title = text(entry?.title, 120);
+  if (!title) return { ok: false, errors: ['A notice needs a title.'] };
+
+  const notice = {
+    id: entry?.id || `note-${crypto.randomUUID()}`,
+    kind: ['alert', 'post', 'video'].includes(entry?.kind) ? entry.kind : 'post',
+    title,
+    body: text(entry?.body, 300),
+    url: text(entry?.url, 300) || '/',
+    sentAt: new Date().toISOString(),
+  };
+
+  state.notices.unshift(notice);
+  // A rolling window: nobody reads back through a notification history, and
+  // the newsroom record is not the place to keep one.
+  state.notices = state.notices.slice(0, 30);
+  commit();
+  return { ok: true, notice };
+}
+
+export const getNotices = () => state.notices;
+export const getLatestNotice = () => state.notices[0] ?? null;
+
+/** Have we already announced this alert? */
+export const wasNotified = (id) => state.notified.includes(id);
+
+export function markNotified(ids) {
+  const list = (Array.isArray(ids) ? ids : [ids]).map((id) => text(id, 200)).filter(Boolean);
+  if (!list.length) return { ok: true };
+  // Newest at the front, capped: an alert that has aged out of this list has
+  // long since expired, so it cannot be announced twice.
+  state.notified = [...list, ...state.notified.filter((id) => !list.includes(id))].slice(0, 400);
+  commit();
+  return { ok: true };
+}
 
 /* ---------------------------------------------------------------- program */
 

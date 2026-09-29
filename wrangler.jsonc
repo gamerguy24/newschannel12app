@@ -45,6 +45,11 @@
     "watch_dir": "frontend/src"
   },
 
+  // Nothing tells this Worker when a warning is issued, so once a minute it
+  // asks the NWS and pushes anything new. Matched by alert id, so a warning
+  // that runs for an hour is announced once.
+  "triggers": { "crons": ["* * * * *"] },
+
   "observability": { "enabled": true },
   "dev": { "port": 8787 },
 
@@ -62,6 +67,10 @@
     "LIVE_STREAM_TYPE": "hls",
     "SPONSOR_NAME": "",
     "SPONSOR_TAGLINE": "",
-    "CORS_ORIGINS": ""
+    "CORS_ORIGINS": "",
+    // The push identity. Public half only - the private key is a secret,
+    // set with `wrangler secret put VAPID_PRIVATE_JWK`.
+    "VAPID_PUBLIC_KEY": "BNqPeLEkDr26BmM5qrbsexeHDmHUGcaduTP6lmFaECog2qupSt_QAMuNR0mBt1sTbwXxcs1UJJBUGa9oCKdq0jA",
+    "VAPID_SUBJECT": "mailto:weather@storm12weather.example"
   }
 }
