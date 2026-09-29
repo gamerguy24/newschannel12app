@@ -27,16 +27,7 @@
 
   // The video library. R2 rather than Stream: no per-minute charge and no
   // egress bill, at the cost of nothing transcoding what gets uploaded.
-  //
-  // Commented out until the bucket exists, because wrangler rejects a binding
-  // to a bucket it cannot find and that would take the whole deploy down with
-  // it. Create it once:
-  //
-  //   npx wrangler r2 bucket create storm12-video
-  //
-  // then uncomment. Until then the app runs exactly as before and the Video
-  // Library panel says storage is not configured.
-  // "r2_buckets": [{ "binding": "VIDEO", "bucket_name": "storm12-video" }],
+  "r2_buckets": [{ "binding": "VIDEO", "bucket_name": "storm12-video" }],
 
   // No explicit CPU limit. Decoding a Level III sweep is real computation -
   // bzip2, rasterise, PNG, about 250ms - but the Paid plan already allows 30
