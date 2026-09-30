@@ -797,3 +797,9 @@
 .nc-blog-admin__state.is-draft {
   color: var(--nc-text-dim);
 }
+
+/* A video block can pick from the library or upload straight into the post. */
+.nc-blog-admin__video {
+  display: grid;
+  gap: var(--space-2);
+}

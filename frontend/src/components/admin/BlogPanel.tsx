@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { Button } from '../ui/Primitives';
 import { AdminCard, Field } from './StationPanels';
-import { deletePost, savePost, uploadPostImage } from '../../services/admin';
+import { attachVideoPoster, deletePost, savePost, uploadPostImage, uploadVideo } from '../../services/admin';
+import { readPoster } from './readPoster';
 import type { AdminState, StationPost, StationPostBlock } from '../../api/types';
 
 /**
@@ -46,6 +47,8 @@ export function BlogPanel({ state, onSaved }: { state: AdminState; onSaved: () =
   const [draft, setDraft] = useState<Draft>(blank());
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<Status>(null);
+  // Which block is uploading a clip, and how far along.
+  const [clipUp, setClipUp] = useState<{ block: string; ratio: number } | null>(null);
   const heroInput = useRef<HTMLInputElement>(null);
 
   const storageReady = state.video.storageConfigured;
@@ -87,6 +90,36 @@ export function BlogPanel({ state, onSaved }: { state: AdminState; onSaved: () =
     } finally {
       setBusy(false);
       if (heroInput.current) heroInput.current.value = '';
+    }
+  };
+
+  /**
+   * Put a clip straight into the post.
+   *
+   * Making somebody leave the editor, upload in the Video Library, come back
+   * and find their draft again is the kind of round trip that stops a post
+   * from having video in it at all. The clip lands in the library too, so it
+   * is still there to reuse.
+   */
+  const pickClip = async (file: File | null, blockId: string) => {
+    if (!file) return;
+    setStatus(null);
+    setClipUp({ block: blockId, ratio: 0 });
+    try {
+      const read = await readPoster(file);
+      const title = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim().slice(0, 120) || 'Untitled clip';
+      const video = await uploadVideo(file, { title, durationSeconds: read.durationSeconds }, (p) =>
+        setClipUp({ block: blockId, ratio: p.ratio }),
+      );
+      if (read.poster) await attachVideoPoster(video.id, read.poster).catch(() => undefined);
+      editBlock(blockId, { videoId: video.id });
+      setStatus({ kind: 'ok', message: `"${video.title}" uploaded and added to this post.` });
+      // The library gained a clip, so the picker beside this needs to know.
+      onSaved();
+    } catch (err) {
+      setStatus({ kind: 'error', message: (err as Error).message });
+    } finally {
+      setClipUp(null);
     }
   };
 
@@ -277,19 +310,48 @@ export function BlogPanel({ state, onSaved }: { state: AdminState; onSaved: () =
               )}
 
               {block.type === 'video' && (
-                <div className="nc-blog-admin__hero">
-                  <select
-                    value={block.videoId ?? ''}
-                    onChange={(e) => editBlock(block.id, { videoId: e.target.value })}
-                    aria-label={`Video ${index + 1}`}
-                  >
-                    <option value="">Pick a clip from the video library</option>
-                    {state.videos.map((video) => (
-                      <option key={video.id} value={video.id}>
-                        {video.title}
-                      </option>
-                    ))}
-                  </select>
+                <div className="nc-blog-admin__video">
+                  {state.videos.length > 0 && (
+                    <select
+                      value={block.videoId ?? ''}
+                      onChange={(e) => editBlock(block.id, { videoId: e.target.value })}
+                      aria-label={`Video ${index + 1}`}
+                    >
+                      <option value="">Pick a clip already in the library</option>
+                      {state.videos.map((video) => (
+                        <option key={video.id} value={video.id}>
+                          {video.title}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  <div className="nc-blog-admin__hero">
+                    <span className="nc-admin__card-note">
+                      {state.videos.length ? 'or upload a new one' : 'Upload a clip'}
+                    </span>
+                    <input
+                      type="file"
+                      accept={state.video.types.join(',')}
+                      disabled={!storageReady || Boolean(clipUp)}
+                      aria-label={`Upload video ${index + 1}`}
+                      onChange={(e) => void pickClip(e.target.files?.[0] ?? null, block.id)}
+                    />
+                  </div>
+
+                  {clipUp?.block === block.id && (
+                    <div className="nc-video-admin__progress" role="status" aria-live="polite">
+                      <div className="nc-video-admin__bar">
+                        <span style={{ width: `${Math.round(clipUp.ratio * 100)}%` }} />
+                      </div>
+                      <span>{Math.round(clipUp.ratio * 100)}% uploaded</span>
+                    </div>
+                  )}
+
+                  {!storageReady && (
+                    <p className="nc-admin__card-note">Video needs the media bucket before it can be uploaded.</p>
+                  )}
+
                   <input
                     value={block.caption ?? ''}
                     onChange={(e) => editBlock(block.id, { caption: e.target.value })}
@@ -311,7 +373,9 @@ export function BlogPanel({ state, onSaved }: { state: AdminState; onSaved: () =
             <Button variant="ghost" onClick={() => addBlock('image')} disabled={!storageReady}>
               Add image
             </Button>
-            <Button variant="ghost" onClick={() => addBlock('video')} disabled={state.videos.length === 0}>
+            {/* Never disabled for an empty library: the block itself can
+                upload one, and a greyed-out button explains nothing. */}
+            <Button variant="ghost" onClick={() => addBlock('video')} disabled={!storageReady}>
               Add video
             </Button>
           </div>
