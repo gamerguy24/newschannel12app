@@ -1,0 +1,37 @@
+{
+  "name": "Storm 12 Weather",
+  "short_name": "Storm 12",
+  "description": "Live radar, severe weather coverage and forecasts for Middle Tennessee and southern Kentucky.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#070e16",
+  "theme_color": "#0b2545",
+  "categories": ["weather", "news"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Live Radar", "short_name": "Radar", "url": "/radar" },
+    { "name": "Severe Weather Center", "short_name": "Severe", "url": "/severe" },
+    { "name": "Forecast", "short_name": "Forecast", "url": "/forecast" }
+  ]
+}
