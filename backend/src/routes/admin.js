@@ -14,6 +14,7 @@ import {
   getStationIdentity,
   getStore,
   getPosts,
+  getReports,
   getVideos,
 } from '../services/stationStore.js';
 import {
@@ -167,6 +168,7 @@ router.get(
         program: getProgram(),
         videos: getVideos(),
         posts: getPosts(),
+        reports: getReports(),
         blog: { imageTypes: IMAGE_TYPES, imageMaxBytes: IMAGE_MAX_BYTES },
         video: {
           storageConfigured: videoStorageReady(req.env),
@@ -408,6 +410,35 @@ router.delete(
     // The card goes first: a viewer must never be handed a link to bytes that
     // are already on their way out of the bucket.
     if (outcome.video) await deleteObjects(req.env, [outcome.video.key, outcome.video.posterKey]);
+    res.json(envelope({ ok: true }));
+  }),
+);
+
+/* --------------------------------------------------------------- reports */
+
+/**
+ * The moderation queue.
+ *
+ * Approving is the only thing that puts a viewer's photo on the public site,
+ * and it is a person doing it. Rejecting keeps the record but hides it;
+ * deleting takes the photo out of the bucket with it.
+ */
+router.put(
+  '/reports/:id/status',
+  requireAdmin,
+  asyncRoute(async (req, res) =>
+    result(res, await runStore(req.env, 'setReportStatus', req.params.id, String(req.body?.status ?? ''))),
+  ),
+);
+
+router.delete(
+  '/reports/:id',
+  requireAdmin,
+  asyncRoute(async (req, res) => {
+    const outcome = await runStore(req.env, 'deleteReport', req.params.id);
+    // The store hands back the media record it dropped, key and all, so the
+    // bytes can go too rather than lingering in the bucket unreachable.
+    if (outcome.orphanMedia?.key) await deleteObjects(req.env, [outcome.orphanMedia.key]);
     res.json(envelope({ ok: true }));
   }),
 );

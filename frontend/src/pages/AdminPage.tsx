@@ -8,6 +8,7 @@ import { GraphicsStudio } from '../components/admin/GraphicsStudio';
 import { OpsPanel } from '../components/admin/OpsPanel';
 import { VideoPanel } from '../components/admin/VideoPanel';
 import { BlogPanel } from '../components/admin/BlogPanel';
+import { ReportsPanel } from '../components/admin/ReportsPanel';
 import { getAdminState, getSession, login, logout, readToken } from '../services/admin';
 import { formatRelative } from '../utils/format';
 import type { AdminState } from '../api/types';
@@ -24,7 +25,7 @@ import '../components/admin/admin.css';
  * newsroom, not another page of the weather site.
  */
 
-type SectionId = 'ops' | 'onair' | 'alerts' | 'closings' | 'graphics' | 'video' | 'blog' | 'station' | 'markets';
+type SectionId = 'ops' | 'onair' | 'alerts' | 'closings' | 'graphics' | 'video' | 'blog' | 'reports' | 'station' | 'markets';
 
 const SECTIONS: Array<{ id: SectionId; label: string; group: string; title: string; blurb: string }> = [
   {
@@ -75,6 +76,13 @@ const SECTIONS: Array<{ id: SectionId; label: string; group: string; title: stri
     group: 'Newsroom',
     title: 'Blog',
     blurb: 'Write posts with images and video. Only the newsroom can post.',
+  },
+  {
+    id: 'reports',
+    label: 'Storm Reports',
+    group: 'Newsroom',
+    title: 'Viewer Storm Reports',
+    blurb: 'What viewers send in. Nothing reaches the site until you approve it.',
   },
   {
     id: 'station',
@@ -342,6 +350,7 @@ export function AdminPage() {
             {section === 'graphics' && <GraphicsStudio state={state} onSaved={refresh} />}
             {section === 'video' && <VideoPanel state={state} onSaved={refresh} />}
             {section === 'blog' && <BlogPanel state={state} onSaved={refresh} />}
+            {section === 'reports' && <ReportsPanel state={state} onSaved={refresh} />}
             {section === 'station' && <StationPanel key={state.station.name} state={state} onSaved={refresh} />}
             {section === 'markets' && <MarketsPanel state={state} onSaved={refresh} />}
           </>

@@ -619,6 +619,7 @@ export interface AdminState {
   program: ProgramGraphic | null;
   videos: StationVideo[];
   posts: StationPost[];
+  reports: StationReport[];
   blog: { imageTypes: string[]; imageMaxBytes: number };
   video: {
     /** False until the R2 bucket exists and is bound; uploading is off. */
@@ -712,6 +713,45 @@ export interface BlogCard {
 
 export interface BlogPost extends BlogCard {
   blocks: PostBlock[];
+}
+
+/* --------------------------------------------------------- storm reports */
+
+export interface ReportKind {
+  id: string;
+  label: string;
+}
+
+/** What a viewer sees. There is deliberately no contact field. */
+export interface StormReportCard {
+  id: string;
+  kind: string;
+  kindLabel: string;
+  where: string;
+  description: string;
+  credit: string;
+  photo: string | null;
+  submittedAt: string;
+}
+
+/** The newsroom's view, contact details and all. */
+export interface StationReport {
+  id: string;
+  kind: string;
+  where: string;
+  description: string;
+  name: string;
+  contact: string;
+  mediaId: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: string;
+  reviewedAt: string | null;
+}
+
+export interface StormReportFeed {
+  reports: StormReportCard[];
+  kinds: ReportKind[];
+  photosAccepted: boolean;
 }
 
 export interface SourceHealth {

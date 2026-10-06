@@ -44,6 +44,10 @@ const EMPTY = {
   notices: [],
   /** Alert ids already pushed, so a running warning is announced once. */
   notified: [],
+  /** Viewer storm reports, awaiting review or already published. */
+  reports: [],
+  /** Hashed senders and when, so one person cannot flood the queue. */
+  reportThrottle: [],
 };
 
 let state = structuredClone(EMPTY);
@@ -685,6 +689,132 @@ export const getPosts = () =>
 export const getPublishedPosts = () => getPosts().filter((p) => p.status === 'published');
 
 export const findPost = (slug) => getPublishedPosts().find((p) => p.slug === slug) ?? null;
+
+/* ------------------------------------------------------- viewer reports */
+
+export const REPORT_KINDS = [
+  { id: 'hail', label: 'Hail' },
+  { id: 'wind', label: 'Wind damage' },
+  { id: 'flood', label: 'Flooding' },
+  { id: 'tornado', label: 'Tornado / funnel' },
+  { id: 'winter', label: 'Snow or ice' },
+  { id: 'other', label: 'Something else' },
+];
+
+const REPORT_STATUSES = ['pending', 'approved', 'rejected'];
+
+/** How many a single sender may file in an hour before being turned away. */
+const REPORT_LIMIT = 5;
+const REPORT_WINDOW_MS = 60 * 60 * 1000;
+
+/** A ceiling on the queue, so nobody can fill the bucket by holding a button. */
+const REPORT_QUEUE_MAX = 300;
+
+/**
+ * Is this sender filing too fast?
+ *
+ * Keyed by a hash of the address rather than the address, because an IP is
+ * personal data and holding it serves no purpose once it has been counted.
+ */
+export function reportThrottled(key) {
+  const now = Date.now();
+  state.reportThrottle = state.reportThrottle.filter((row) => now - row.at < REPORT_WINDOW_MS);
+  return state.reportThrottle.filter((row) => row.key === key).length >= REPORT_LIMIT;
+}
+
+export function recordReportAttempt(key) {
+  state.reportThrottle.push({ key: text(key, 72), at: Date.now() });
+  commit();
+  return { ok: true };
+}
+
+/**
+ * File a report from a viewer.
+ *
+ * It lands as pending and nothing publishes it but a person. An anonymous
+ * upload form on a station's own site is exactly the thing that must not go
+ * straight to air, and the queue is where that judgement happens.
+ *
+ * Contact details are kept because the newsroom needs to be able to reach a
+ * sender for permission or to check a doubtful report - and they are never
+ * handed back out by the public route.
+ */
+export function saveReport(entry) {
+  const errors = [];
+  const kind = REPORT_KINDS.some((k) => k.id === entry?.kind) ? entry.kind : null;
+  if (!kind) errors.push('Pick what you are reporting.');
+
+  const where = text(entry?.where, 120);
+  if (!where) errors.push('Say where this happened.');
+
+  const description = text(entry?.description, 1000);
+  if (!description) errors.push('Describe what you saw.');
+
+  const name = text(entry?.name, 80);
+  if (!name) errors.push('Give your name so we can credit the report.');
+
+  const contact = text(entry?.contact, 120);
+  if (!contact) errors.push('Leave a phone number or email so we can reach you.');
+
+  if (entry?.permission !== true) errors.push('Tick the box to let us use this on air.');
+
+  if (state.reports.filter((r) => r.status === 'pending').length >= REPORT_QUEUE_MAX) {
+    errors.push('The report queue is full right now. Please try again later.');
+  }
+
+  if (errors.length) return { ok: false, errors };
+
+  const record = {
+    id: `rep-${crypto.randomUUID()}`,
+    kind,
+    where,
+    description,
+    name,
+    contact,
+    mediaId: text(entry?.mediaId, 60) || null,
+    status: 'pending',
+    submittedAt: new Date().toISOString(),
+    reviewedAt: null,
+  };
+
+  state.reports.unshift(record);
+  commit();
+  return { ok: true, report: record };
+}
+
+export function setReportStatus(id, status) {
+  if (!REPORT_STATUSES.includes(status)) return { ok: false, errors: ['That is not a report status.'] };
+  const report = state.reports.find((r) => r.id === id);
+  if (!report) return { ok: false, errors: ['That report is not in the queue.'] };
+
+  report.status = status;
+  report.reviewedAt = new Date().toISOString();
+  commit();
+  return { ok: true, report };
+}
+
+export function deleteReport(id) {
+  const report = state.reports.find((r) => r.id === id) ?? null;
+  state.reports = state.reports.filter((r) => r.id !== id);
+
+  // The photo goes with it unless another report somehow points at the same
+  // one. The whole media record comes back, not just its id: the caller needs
+  // the bucket key to remove the bytes, and it is about to be deleted here.
+  let orphanMedia = null;
+  if (report?.mediaId && !state.reports.some((r) => r.mediaId === report.mediaId)) {
+    orphanMedia = state.media.find((m) => m.id === report.mediaId) ?? null;
+    state.media = state.media.filter((m) => m.id !== report.mediaId);
+  }
+
+  commit();
+  return { ok: true, report, orphanMedia };
+}
+
+/** Everything, for the newsroom queue. */
+export const getReports = () => state.reports;
+
+/** Only what a person has approved, which is all a viewer may see. */
+export const getApprovedReports = () => state.reports.filter((r) => r.status === 'approved');
 
 /* --------------------------------------------------------- notifications */
 

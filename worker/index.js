@@ -12,6 +12,7 @@ import adminRoutes from '../backend/src/routes/admin.js';
 import videoRoutes from '../backend/src/routes/video.js';
 import blogRoutes from '../backend/src/routes/blog.js';
 import notificationRoutes from '../backend/src/routes/notifications.js';
+import reportRoutes from '../backend/src/routes/reports.js';
 import { scanForAlerts } from '../backend/src/services/notify.js';
 
 /**
@@ -36,6 +37,7 @@ const MOUNTS = [
   { prefix: '/api', router: videoRoutes },
   { prefix: '/api', router: blogRoutes },
   { prefix: '/api', router: notificationRoutes },
+  { prefix: '/api', router: reportRoutes },
   { prefix: '/api', router: mapRoutes },
   { prefix: '/api', router: miscRoutes },
 ];
@@ -44,7 +46,8 @@ const MOUNTS = [
 const needsFreshState = (pathname) =>
   pathname === '/api/graphics/program' ||
   pathname.startsWith('/api/admin') ||
-  pathname.startsWith('/api/notifications');
+  pathname.startsWith('/api/notifications') ||
+  pathname === '/api/reports';
 
 function corsHeaders(request, url) {
   const origin = request.headers.get('origin');

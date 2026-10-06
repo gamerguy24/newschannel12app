@@ -18,6 +18,7 @@ const LivePage = lazy(() => import('./pages/LivePage'));
 const WeatherMapPage = lazy(() => import('./pages/WeatherMapPage'));
 const VideosPage = lazy(() => import('./pages/VideosPage'));
 const BlogPage = lazy(() => import('./pages/BlogPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const PostPage = lazy(() => import('./pages/PostPage'));
 const CountiesPage = lazy(() => import('./pages/CountiesPage'));
 const CountyDetailPage = lazy(() => import('./pages/CountyDetailPage'));
@@ -57,6 +58,7 @@ function AppRoutes() {
         <Route path="/tropics" element={<TropicsPage />} />
         <Route path="/discussion" element={<DiscussionPage />} />
         <Route path="/video" element={<VideosPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
         <Route path="/blog" element={<BlogPage />} />
         <Route path="/blog/:slug" element={<PostPage />} />
         <Route path="/news" element={<NewsPage />} />

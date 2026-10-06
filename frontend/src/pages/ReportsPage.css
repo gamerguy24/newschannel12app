@@ -1,0 +1,166 @@
+/* The published reports read as a column; the form sits beside them so
+   somebody who came to send one does not have to scroll past the gallery. */
+
+.nc-reports__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.nc-reports__list {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.nc-reports__photo {
+  width: 100%;
+  max-height: 460px;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+
+.nc-reports__body {
+  padding: var(--space-3);
+}
+
+.nc-reports__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.nc-reports__kind {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--nc-red, #c8102e);
+  color: #fff;
+}
+
+.nc-reports__where {
+  font-weight: 700;
+}
+
+.nc-reports__desc {
+  margin: var(--space-2) 0 0;
+  line-height: 1.6;
+  max-width: 62ch;
+}
+
+.nc-reports__credit {
+  margin: var(--space-2) 0 0;
+  font-size: 0.82rem;
+  color: var(--nc-text-dim);
+}
+
+/* ------------------------------------------------------------- the form */
+
+.nc-reports__form .nc-field {
+  margin-bottom: var(--space-3);
+}
+
+.nc-reports__note {
+  margin: 0 0 var(--space-3);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--nc-text-dim);
+}
+
+.nc-reports__pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.nc-reports__permission {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: var(--space-3) 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--nc-text-dim);
+}
+
+.nc-reports__permission input {
+  margin-top: 3px;
+  flex: none;
+}
+
+.nc-reports__status {
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.nc-reports__status.is-ok {
+  color: #22c55e;
+}
+
+.nc-reports__status.is-error {
+  color: #ff6b6b;
+}
+
+@media (max-width: 900px) {
+  .nc-reports__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .nc-reports__pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The form's own field styles.
+   The admin panel has these too, but its stylesheet is only loaded inside
+   the newsroom - a public page that borrowed them rendered every label
+   beside its input instead of above it. */
+
+.nc-reports .nc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.nc-reports .nc-field__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--nc-text-dim);
+}
+
+.nc-reports .nc-field__help {
+  font-size: var(--text-xs);
+  color: var(--nc-text-faint);
+  line-height: 1.45;
+}
+
+.nc-reports .nc-field input,
+.nc-reports .nc-field textarea,
+.nc-reports .nc-field select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--nc-line);
+  border-radius: var(--radius-sm);
+  background: var(--nc-navy-900);
+  color: var(--nc-text);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+
+.nc-reports .nc-field textarea {
+  resize: vertical;
+}
+
+.nc-reports__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+}

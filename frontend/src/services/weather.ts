@@ -1,4 +1,4 @@
-import { apiGet, apiGetEnvelope, apiGetRaw, apiStream } from '../api/client';
+import { apiGet, apiGetEnvelope, apiGetRaw, apiPost, apiStream } from '../api/client';
 import type {
   AppConfig,
   BreakingWeather,
@@ -24,6 +24,7 @@ import type {
   VideoLibrary,
   BlogCard,
   BlogPost,
+  StormReportFeed,
 } from '../api/types';
 
 /**
@@ -424,3 +425,29 @@ export const getBlog = (signal?: AbortSignal) =>
 
 export const getPost = (slug: string, signal?: AbortSignal) =>
   apiGet<{ post: BlogPost }>(`/blog/${encodeURIComponent(slug)}`, undefined, { signal });
+
+/* --------------------------------------------------------- storm reports */
+
+/** Approved reports only; a pending one has no public address. */
+export const getStormReportFeed = (signal?: AbortSignal) =>
+  apiGet<StormReportFeed>('/reports', undefined, { signal });
+
+export interface ReportDraft {
+  kind: string;
+  where: string;
+  description: string;
+  name: string;
+  contact: string;
+  permission: boolean;
+  /** Base64 JPEG from preparePhoto, or omitted. */
+  photo?: string;
+}
+
+/**
+ * File a report. Not memoised and not an apiGet: this writes, and a retry
+ * must actually reach the newsroom rather than replay a cached answer.
+ */
+export const submitStormReport = (draft: ReportDraft) =>
+  // A photo on a phone connection in bad weather needs longer than the
+  // default: that is exactly when somebody is filling this in.
+  apiPost<{ ok: true; message: string }>('/reports', draft, { timeoutMs: 90000 });

@@ -803,3 +803,78 @@
   display: grid;
   gap: var(--space-2);
 }
+
+/* --------------------------------------------------------- report queue */
+
+.nc-report-row {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--nc-line);
+}
+
+.nc-report-row:first-child {
+  border-top: 0;
+}
+
+.nc-report-row__photo {
+  width: 180px;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: #000;
+}
+
+.nc-report-row__photo--none {
+  background: linear-gradient(135deg, #16273c, #0d1826);
+  border: 1px dashed var(--nc-line);
+}
+
+.nc-report-row__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.nc-report-row__kind {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--nc-line);
+  color: var(--nc-text-dim);
+}
+
+.nc-report-row__state {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nc-report-row__state.is-approved { color: #22c55e; }
+.nc-report-row__state.is-rejected { color: #ff6b6b; }
+.nc-report-row__state.is-pending { color: var(--nc-gold, #ffb800); }
+
+.nc-report-row__desc {
+  margin: var(--space-2) 0;
+  line-height: 1.55;
+}
+
+.nc-report-row__actions {
+  display: grid;
+  gap: 6px;
+  justify-items: stretch;
+}
+
+@media (max-width: 860px) {
+  .nc-report-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .nc-report-row__photo {
+    width: 100%;
+  }
+}

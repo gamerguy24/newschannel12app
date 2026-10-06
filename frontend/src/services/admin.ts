@@ -12,6 +12,7 @@ import type {
   StationGraphic,
   StationPost,
   StationPostBlock,
+  StationReport,
   StationVideo,
 } from '../api/types';
 
@@ -283,3 +284,14 @@ export const savePost = (post: {
 }) => adminFetch<{ post: StationPost }>('/posts', { method: 'POST', body: JSON.stringify(post) });
 
 export const deletePost = (id: string) => adminFetch<{ ok: true }>(`/posts/${id}`, { method: 'DELETE' });
+
+/* --------------------------------------------------------- storm reports */
+
+/** Approving is the only thing that puts a viewer's photo on the public site. */
+export const setReportStatus = (id: string, status: 'pending' | 'approved' | 'rejected') =>
+  adminFetch<{ report: StationReport }>(`/reports/${id}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status }),
+  });
+
+export const deleteReport = (id: string) => adminFetch<{ ok: true }>(`/reports/${id}`, { method: 'DELETE' });

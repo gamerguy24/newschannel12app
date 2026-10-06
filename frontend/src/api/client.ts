@@ -33,6 +33,8 @@ export class ApiError extends Error {
 interface RequestOptions {
   signal?: AbortSignal;
   timeoutMs?: number;
+  /** Extra fetch options, for the handful of calls that write. */
+  init?: RequestInit;
 }
 
 /**
@@ -94,7 +96,11 @@ async function rawFetch<T>(url: string, options: RequestOptions): Promise<T> {
   options.signal?.addEventListener('abort', onAbort);
 
   try {
-    const res = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
+    const res = await fetch(url, {
+      ...options.init,
+      signal: controller.signal,
+      headers: { Accept: 'application/json', ...(options.init?.headers ?? {}) },
+    });
     const text = await res.text();
     let body: unknown = null;
     try {
@@ -150,6 +156,26 @@ export async function apiGet<T>(
 }
 
 /** GET an enveloped endpoint keeping the envelope metadata (stale flags etc). */
+/**
+ * A write.
+ *
+ * Deliberately not memoised and never shared between callers: a retry has to
+ * reach the server rather than replay the answer somebody else already got.
+ */
+export async function apiPost<T>(path: string, body: unknown, options: RequestOptions = {}): Promise<T> {
+  const payload = await rawFetch<Envelope<T> | T>(buildUrl(path), {
+    ...options,
+    init: {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+  });
+  return payload && typeof payload === 'object' && 'data' in payload
+    ? ((payload as Envelope<T>).data as T)
+    : (payload as T);
+}
+
 export async function apiGetEnvelope<T>(
   path: string,
   params?: Record<string, unknown>,
