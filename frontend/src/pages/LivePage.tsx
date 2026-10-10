@@ -158,6 +158,58 @@ export function LivePage() {
         </Panel>
       )}
 
+      <div className="nc-live__social">
+        <Panel
+          eyebrow="Facebook"
+          title="Storm 12 on Facebook"
+          flush
+          action={
+            <a
+              href="https://www.facebook.com/100014665188516/videos/2209040956701718"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open on Facebook
+            </a>
+          }
+        >
+          <iframe
+            className="nc-live__social-embed"
+            src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(
+              'https://www.facebook.com/100014665188516/videos/2209040956701718',
+            )}&show_text=false`}
+            title="Storm 12 video on Facebook"
+            loading="lazy"
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </Panel>
+
+        <Panel
+          eyebrow="YouTube"
+          title="Storm 12 on YouTube"
+          flush
+          action={
+            <a
+              href="https://www.youtube.com/watch?v=x85WIHpKGA4"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open on YouTube
+            </a>
+          }
+        >
+          <iframe
+            className="nc-live__social-embed"
+            src="https://www.youtube-nocookie.com/embed/x85WIHpKGA4"
+            title="Storm 12 video on YouTube"
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </Panel>
+      </div>
+
       <div className="nc-live__grid">
         <Panel eyebrow="Right now" title="Current Conditions">
           {data?.current ? (

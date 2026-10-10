@@ -238,3 +238,18 @@
   background: #000;
   display: block;
 }
+
+.nc-live__social {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.nc-live__social-embed {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  background: #000;
+}

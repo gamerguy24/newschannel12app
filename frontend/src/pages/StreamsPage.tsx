@@ -1,16 +1,7 @@
-import { useEffect } from 'react';
 import { Panel } from '../components/ui/Primitives';
 import './StreamsPage.css';
 
 export function StreamsPage() {
-  useEffect(() => {
-    // Tell the Facebook SDK to re-parse the DOM for newly added .fb-video elements
-    const fb = (window as any).FB;
-    if (fb) {
-      fb.XFBML.parse();
-    }
-  }, []);
-
   return (
     <div className="nc-page nc-streams">
       <header className="nc-page__head">
@@ -22,15 +13,10 @@ export function StreamsPage() {
 
       <div className="nc-streams__layout">
         <Panel className="nc-streams__stage">
-          <div className="nc-streams__embed-container">
-            <div
-              className="fb-video"
-              data-href="https://www.facebook.com/LarontaBarbee/live/"
-              data-width="800"
-              data-show-text="false"
-              data-allowfullscreen="true"
-              data-autoplay="true"
-            ></div>
+          <div className="nc-streams__embed-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', textAlign: 'center', padding: '2rem' }}>
+            <h2 style={{ marginBottom: '1rem' }}>Stream Setup Required</h2>
+            <p>To display the live stream here, we need a <strong>public playback URL</strong> or an <strong>Embed Code</strong> (like a YouTube Video ID or a Restream Embed Player URL).</p>
+            <p style={{ marginTop: '1rem', color: '#ffaaaa' }}>⚠️ The <strong>Stream Key</strong> you generated is for your broadcasting software (OBS). It cannot be used to display the video to viewers!</p>
           </div>
         </Panel>
       </div>
