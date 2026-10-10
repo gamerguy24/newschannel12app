@@ -1,0 +1,32 @@
+.nc-streams__layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.nc-streams__stage {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #000;
+  min-height: 400px;
+}
+
+.nc-streams__embed-container {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.nc-streams__embed-container iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-width: 100%;
+}
+

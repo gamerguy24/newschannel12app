@@ -17,6 +17,7 @@ export const NAV_ITEMS = [
   { to: '/forecast', label: 'Forecast' },
   { to: '/severe', label: 'Severe Center' },
   { to: '/live', label: 'Live' },
+  { to: '/streams', label: 'Streams' },
   { to: '/map', label: 'Weather Map' },
   { to: '/counties', label: 'Counties' },
   { to: '/stations', label: 'Stations' },
