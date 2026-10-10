@@ -1,8 +1,16 @@
+import { useEffect } from 'react';
 import { Panel } from '../components/ui/Primitives';
-import { FacebookEmbed } from 'react-social-media-embed';
 import './StreamsPage.css';
 
 export function StreamsPage() {
+  useEffect(() => {
+    // Tell the Facebook SDK to re-parse the DOM for newly added .fb-video elements
+    const fb = (window as any).FB;
+    if (fb) {
+      fb.XFBML.parse();
+    }
+  }, []);
+
   return (
     <div className="nc-page nc-streams">
       <header className="nc-page__head">
@@ -15,10 +23,14 @@ export function StreamsPage() {
       <div className="nc-streams__layout">
         <Panel className="nc-streams__stage">
           <div className="nc-streams__embed-container">
-            <FacebookEmbed 
-              url="https://www.facebook.com/LarontaBarbee/videos/2595785844253563/" 
-              width="100%" 
-            />
+            <div
+              className="fb-video"
+              data-href="https://www.facebook.com/LarontaBarbee/videos/2595785844253563/"
+              data-width="800"
+              data-show-text="false"
+              data-allowfullscreen="true"
+              data-autoplay="true"
+            ></div>
           </div>
         </Panel>
       </div>
