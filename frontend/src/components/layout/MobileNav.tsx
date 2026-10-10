@@ -45,6 +45,16 @@ const ITEMS = [
     ),
   },
   {
+    to: '/live',
+    label: 'Live',
+    icon: (
+      <>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m10 9 5 3-5 3z" />
+      </>
+    ),
+  },
+  {
     to: '/news',
     label: 'News',
     icon: (

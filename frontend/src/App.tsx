@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { Route, Routes, useLocation as useRouterLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation as useRouterLocation } from 'react-router-dom';
 import { LocationProvider } from './context/LocationContext';
 import { AlertProvider } from './context/AlertContext';
 import AppShell from './components/layout/AppShell';
@@ -33,7 +33,6 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const ClosingsPage = lazy(() => import('./pages/ClosingsPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const GraphicsOutputPage = lazy(() => import('./pages/GraphicsOutputPage'));
-const StreamsPage = lazy(() => import('./pages/StreamsPage'));
 
 function PageFallback() {
   return (
@@ -52,7 +51,7 @@ function AppRoutes() {
         <Route path="/forecast" element={<ForecastPage />} />
         <Route path="/severe" element={<SevereWeatherPage />} />
         <Route path="/live" element={<LivePage />} />
-        <Route path="/streams" element={<StreamsPage />} />
+        <Route path="/streams" element={<Navigate to="/live" replace />} />
         <Route path="/map" element={<WeatherMapPage />} />
         <Route path="/counties" element={<CountiesPage />} />
         <Route path="/counties/:zoneId" element={<CountyDetailPage />} />

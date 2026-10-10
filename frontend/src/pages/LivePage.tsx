@@ -65,7 +65,7 @@ export function LivePage() {
         <div>
           <p className={`nc-live__flag${onAir ? '' : ' is-off'}`}>
             {onAir && <span className="nc-live-dot" aria-hidden="true" />}
-            {onAir ? 'Live weather' : 'Off air'}
+            {onAir ? 'Live weather' : 'Videos available'}
           </p>
           <h1 className="nc-page__title">{location.label}</h1>
         </div>
@@ -82,9 +82,61 @@ export function LivePage() {
         </div>
       </header>
 
+      <div className="nc-live__social">
+        <Panel
+          eyebrow="Facebook video"
+          title="Laronta Barbee on Facebook"
+          flush
+          action={
+            <a
+              href="https://www.facebook.com/100014665188516/videos/2209040956701718"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open on Facebook
+            </a>
+          }
+        >
+          <iframe
+            className="nc-live__social-embed"
+            src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(
+              'https://www.facebook.com/100014665188516/videos/2209040956701718',
+            )}&show_text=false`}
+            title="Laronta Barbee video on Facebook"
+            loading="lazy"
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </Panel>
+
+        <Panel
+          eyebrow="YouTube video"
+          title="Laronta Barbee on YouTube"
+          flush
+          action={
+            <a
+              href="https://www.youtube.com/watch?v=x85WIHpKGA4"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open on YouTube
+            </a>
+          }
+        >
+          <iframe
+            className="nc-live__social-embed"
+            src="https://www.youtube-nocookie.com/embed/x85WIHpKGA4"
+            title="Laronta Barbee video on YouTube"
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </Panel>
+      </div>
+
       <Panel
         eyebrow={onAir ? 'On air now' : 'Stream status'}
-        title={onAir ? stream?.title ?? 'Storm 12 Weather Live' : 'Not Live'}
+        title={onAir ? stream?.title ?? 'Storm 12 Weather Live' : 'Watch the videos above'}
         flush
       >
         <div className="nc-live__stage">
@@ -107,10 +159,10 @@ export function LivePage() {
           ) : (
             <div className="nc-live__offair">
               <Logo variant="stacked" size={64} sweep={false} />
-              <p className="nc-live__offair-tag">Not Live</p>
+              <p className="nc-live__offair-tag">Videos Available</p>
               <p className="nc-live__offair-copy">
-                Storm 12 Weather is not streaming right now. Live coverage starts automatically when the weather
-                warrants it, and this page will switch over on its own.
+                Watch the Facebook and YouTube videos above. The direct broadcast player will appear here when a
+                playback stream is configured.
               </p>
               <div className="nc-live__offair-links">
                 <Link to="/radar">Live radar</Link>
@@ -125,7 +177,7 @@ export function LivePage() {
           <span>
             {onAir
               ? 'Streaming live from the Storm 12 weather center.'
-              : `${stream?.reason ?? 'Nothing is being streamed right now.'} The radar and forecast pages are live regardless.`}
+              : 'No direct broadcast player is configured. The Facebook and YouTube videos above are available to watch.'}
           </span>
         </div>
       </Panel>
@@ -157,58 +209,6 @@ export function LivePage() {
           </div>
         </Panel>
       )}
-
-      <div className="nc-live__social">
-        <Panel
-          eyebrow="Facebook"
-          title="Storm 12 on Facebook"
-          flush
-          action={
-            <a
-              href="https://www.facebook.com/100014665188516/videos/2209040956701718"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Open on Facebook
-            </a>
-          }
-        >
-          <iframe
-            className="nc-live__social-embed"
-            src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(
-              'https://www.facebook.com/100014665188516/videos/2209040956701718',
-            )}&show_text=false`}
-            title="Storm 12 video on Facebook"
-            loading="lazy"
-            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-            allowFullScreen
-          />
-        </Panel>
-
-        <Panel
-          eyebrow="YouTube"
-          title="Storm 12 on YouTube"
-          flush
-          action={
-            <a
-              href="https://www.youtube.com/watch?v=x85WIHpKGA4"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Open on YouTube
-            </a>
-          }
-        >
-          <iframe
-            className="nc-live__social-embed"
-            src="https://www.youtube-nocookie.com/embed/x85WIHpKGA4"
-            title="Storm 12 video on YouTube"
-            loading="lazy"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-          />
-        </Panel>
-      </div>
 
       <div className="nc-live__grid">
         <Panel eyebrow="Right now" title="Current Conditions">
