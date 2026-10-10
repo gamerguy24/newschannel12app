@@ -12,11 +12,55 @@ export function StreamsPage() {
       </header>
 
       <div className="nc-streams__layout">
-        <Panel className="nc-streams__stage">
-          <div className="nc-streams__embed-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', textAlign: 'center', padding: '2rem' }}>
-            <h2 style={{ marginBottom: '1rem' }}>Stream Setup Required</h2>
-            <p>To display the live stream here, we need a <strong>public playback URL</strong> or an <strong>Embed Code</strong> (like a YouTube Video ID or a Restream Embed Player URL).</p>
-            <p style={{ marginTop: '1rem', color: '#ffaaaa' }}>⚠️ The <strong>Stream Key</strong> you generated is for your broadcasting software (OBS). It cannot be used to display the video to viewers!</p>
+        <Panel
+          className="nc-streams__stage"
+          eyebrow="Facebook"
+          title="Laronta Barbee on Facebook"
+          action={
+            <a
+              href="https://www.facebook.com/100014665188516/videos/2209040956701718"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open on Facebook
+            </a>
+          }
+        >
+          <div className="nc-streams__embed-container">
+            <iframe
+              src={`https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(
+                'https://www.facebook.com/100014665188516/videos/2209040956701718',
+              )}&show_text=false`}
+              title="Laronta Barbee video on Facebook"
+              loading="lazy"
+              allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+              allowFullScreen
+            />
+          </div>
+        </Panel>
+
+        <Panel
+          className="nc-streams__stage"
+          eyebrow="YouTube"
+          title="Laronta Barbee on YouTube"
+          action={
+            <a
+              href="https://www.youtube.com/watch?v=x85WIHpKGA4"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open on YouTube
+            </a>
+          }
+        >
+          <div className="nc-streams__embed-container">
+            <iframe
+              src="https://www.youtube-nocookie.com/embed/x85WIHpKGA4"
+              title="Laronta Barbee video on YouTube"
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
           </div>
         </Panel>
       </div>
