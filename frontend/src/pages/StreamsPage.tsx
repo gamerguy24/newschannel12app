@@ -25,7 +25,7 @@ export function StreamsPage() {
           <div className="nc-streams__embed-container">
             <div
               className="fb-video"
-              data-href="https://www.facebook.com/LarontaBarbee/videos/2595785844253563/"
+              data-href="https://www.facebook.com/LarontaBarbee/live/"
               data-width="800"
               data-show-text="false"
               data-allowfullscreen="true"
